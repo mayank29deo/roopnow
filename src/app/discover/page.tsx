@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { DiscoverClient } from "@/components/DiscoverClient";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Discover Artists — Roop",
   description: "Browse India's most talented makeup artists, hairstylists, and beauty professionals.",

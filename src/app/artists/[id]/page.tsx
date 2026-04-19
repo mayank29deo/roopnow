@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ArtistProfile } from "@/components/ArtistProfile";
 import { getSessionUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function ArtistPage({
   params,
 }: {

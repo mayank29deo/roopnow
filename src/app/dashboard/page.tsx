@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 import { formatPrice, formatDateLong } from "@/lib/utils";
 import { Sparkles, Calendar, Clock, MapPin, CheckCircle, XCircle, ArrowUpRight } from "lucide-react";
 import { CancelBookingButton } from "@/components/CancelBookingButton";

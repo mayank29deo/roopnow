@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { ArtistDashboardClient } from "@/components/ArtistDashboardClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function ArtistDashboard() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
