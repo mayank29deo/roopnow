@@ -32,7 +32,7 @@ export default async function RootLayout({
     <html lang="en" className={`${inter.variable} ${fraunces.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <Nav user={user} />
-        <div className="h-20 lg:h-24 shrink-0" aria-hidden />
+        <div className="h-16 lg:h-20 shrink-0" aria-hidden />
         <main className="flex-1">{children}</main>
         <Footer />
       </body>

@@ -54,7 +54,7 @@ export function Nav({ user }: { user: User }) {
       }`}
     >
       <div className="max-w-7xl mx-auto px-5 lg:px-8">
-        <div className="flex items-center justify-between h-20 lg:h-24">
+        <div className="flex items-center justify-between h-16 lg:h-20">
           <Logo />
 
           <nav className="hidden lg:flex items-center gap-1">
