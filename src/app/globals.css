@@ -277,8 +277,8 @@ body {
 
   /* ────────────────────────────────────────────────────────────
      LUXE THEME — applied only to .luxe scope (artist dashboard).
-     Keeps the wine background visible behind cream/beige cards
-     so the brand DNA stays while the artist studio feels premium.
+     Cream backdrop + wine ink so the studio reads as a calm,
+     premium workspace distinct from the public-facing wine theme.
      ──────────────────────────────────────────────────────────── */
   .luxe {
     --cream: #F8EFE0;
@@ -286,8 +286,9 @@ body {
     --cream-3: #E5C8B0;
     --blush: #F2D5C8;
     --wine-ink: #4A1828;
-    --wine-ink-dim: rgba(74, 24, 40, 0.65);
-    --wine-ink-muted: rgba(74, 24, 40, 0.45);
+    --wine-ink-dim: rgba(74, 24, 40, 0.72);
+    --wine-ink-muted: rgba(74, 24, 40, 0.5);
+    color: var(--wine-ink);
   }
   .luxe .glass {
     background: linear-gradient(180deg, rgba(248, 239, 224, 0.96), rgba(239, 217, 196, 0.9));
@@ -352,10 +353,12 @@ body {
     box-shadow: 0 0 0 4px rgba(74, 24, 40, 0.08) !important;
   }
   .luxe .dash-input::placeholder { color: rgba(74, 24, 40, 0.4); }
-  /* Soft blush halo behind the dashboard so the wine bg gets a warm tint */
+  /* Cream backdrop for the artist studio + soft blush/gold accent halos.
+     Paints over the wine body bg so all text reads on cream. */
   .luxe-halo {
     background:
-      radial-gradient(ellipse 80% 60% at 30% 0%, rgba(242, 213, 200, 0.18), transparent 60%),
-      radial-gradient(ellipse 70% 50% at 80% 100%, rgba(232, 184, 109, 0.12), transparent 60%);
+      radial-gradient(ellipse 80% 60% at 30% 0%, rgba(242, 213, 200, 0.55), transparent 65%),
+      radial-gradient(ellipse 70% 50% at 80% 100%, rgba(232, 184, 109, 0.35), transparent 65%),
+      linear-gradient(180deg, #FBF6EC 0%, #F1DFC4 100%);
   }
 }
