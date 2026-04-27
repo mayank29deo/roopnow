@@ -75,7 +75,7 @@ export function ArtistDashboardClient({
   ];
 
   return (
-    <section className="py-10 lg:py-16">
+    <section className="luxe luxe-halo py-10 lg:py-16">
       <div className="max-w-7xl mx-auto px-5 lg:px-8">
         <div className="flex items-start justify-between gap-6 mb-10 flex-wrap">
           <div className="flex items-center gap-5">
