@@ -940,7 +940,7 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
                     value={form.avatarUrl}
                     onChange={(url) => setForm({...form, avatarUrl: url ?? ""})}
                     aspect="square"
-                    label="Avatar"
+                    label="Avatar (profile picture)"
                   />
                   <ImagePicker
                     bucket="avatars"
