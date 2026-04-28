@@ -22,6 +22,7 @@ type Artist = {
   avatarUrl: string;
   coverUrl: string;
   specialties: string;
+  skinToneExpertise: string;
   yearsExp: number;
   instagram: string | null;
   verified: boolean;
@@ -50,7 +51,8 @@ export function ArtistProfile({
     artist.reviews.length > 0
       ? (artist.reviews.reduce((a, b) => a + b.rating, 0) / artist.reviews.length).toFixed(1)
       : null;
-  const specialties = artist.specialties.split(",").map((s) => s.trim());
+  const specialties = artist.specialties.split(",").map((s) => s.trim()).filter(Boolean);
+  const skinTones = artist.skinToneExpertise.split(",").map((s) => s.trim()).filter(Boolean);
 
   function openLightbox(i: number) { setLightbox(i); }
   function next() {
@@ -127,6 +129,19 @@ export function ArtistProfile({
                   <span key={s} className="chip">{s}</span>
                 ))}
               </div>
+              {skinTones.length > 0 && (
+                <div className="mt-4">
+                  <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2 flex items-center gap-1.5">
+                    <span className="w-1 h-1 rounded-full bg-gold" />
+                    Skin tone expertise
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {skinTones.map((s) => (
+                      <span key={s} className="chip text-gold border-gold/30">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="lg:pb-4">

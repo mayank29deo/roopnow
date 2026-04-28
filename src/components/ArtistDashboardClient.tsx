@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Image as ImageIcon, Settings, Check,
   CalendarX, CalendarPlus, ClipboardList, Eye, IndianRupee,
   CreditCard, FileSignature, Instagram, Award, Compass, Wallet,
-  Building2, MessageSquare,
+  Building2, MessageSquare, Palette,
 } from "lucide-react";
 import { formatPrice, formatDateLong } from "@/lib/utils";
 import { AvailabilityCalendar } from "./AvailabilityCalendar";
@@ -26,7 +26,15 @@ type Artist = {
   experienceSummary: string; travelRadiusKm: number;
   upiId: string; bankAccountName: string; bankIfsc: string; bankAccountNo: string;
   cancellationPolicy: string; agreedToTerms: boolean;
+  skinToneExpertise: string;
 };
+
+const SKIN_TONE_OPTIONS = [
+  { value: "Brown", description: "Deep brown skin tones" },
+  { value: "Dusky", description: "Olive / dusky tones" },
+  { value: "Wheatish", description: "Warm wheatish tones" },
+  { value: "Light", description: "Fair / light tones" },
+] as const;
 type Booking = {
   id: string; date: string; timeSlot: string; status: string;
   totalPrice: number; notes: string | null; address: string | null;
@@ -980,6 +988,16 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
                   <input type="number" value={form.travelRadiusKm} onChange={(e) => setForm({...form, travelRadiusKm: Number(e.target.value)})} className="dash-input" min={0} />
                 </ModalField>
               </FieldCard>
+
+              <FieldCard title="Skin tone expertise" icon={Palette}>
+                <p className="text-xs text-ink-dim -mt-1">
+                  Pick every tone you&apos;ve worked with — clients use this to find the right match.
+                </p>
+                <SkinToneSelect
+                  value={form.skinToneExpertise}
+                  onChange={(v) => setForm({ ...form, skinToneExpertise: v })}
+                />
+              </FieldCard>
             </>
           )}
 
@@ -1074,6 +1092,56 @@ function FieldCard({ title, icon: Icon, children }: {
         {title}
       </div>
       {children}
+    </div>
+  );
+}
+
+// Multi-select chip toggle for skin tone expertise. Stored as comma-separated tags.
+function SkinToneSelect({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+  const selected = new Set(
+    value
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
+
+  function toggle(tone: string) {
+    const next = new Set(selected);
+    if (next.has(tone)) next.delete(tone);
+    else next.add(tone);
+    onChange(Array.from(next).join(", "));
+  }
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {SKIN_TONE_OPTIONS.map((opt) => {
+        const active = selected.has(opt.value);
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => toggle(opt.value)}
+            aria-pressed={active}
+            className={`flex flex-col items-start gap-1 p-3 lg:p-4 rounded-2xl border text-left transition-all ${
+              active
+                ? "border-gold bg-gradient-to-br from-gold/20 via-gold/5 to-transparent shadow-sm"
+                : "border-border bg-surface/40 hover:border-gold/40"
+            }`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span className="font-medium">{opt.value}</span>
+              <span
+                className={`w-5 h-5 rounded-full flex items-center justify-center border ${
+                  active ? "bg-gradient-to-br from-gold to-amber border-gold text-wine-deep" : "border-border-strong text-transparent"
+                }`}
+              >
+                <Check size={11} strokeWidth={3} />
+              </span>
+            </div>
+            <span className="text-[11px] text-ink-dim">{opt.description}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

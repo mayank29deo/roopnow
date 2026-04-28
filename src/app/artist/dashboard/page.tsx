@@ -87,6 +87,7 @@ export default async function ArtistDashboard() {
     bankAccountNo: artistRow.bank_account_no ?? "",
     cancellationPolicy: artistRow.cancellation_policy ?? "",
     agreedToTerms: artistRow.agreed_to_terms ?? false,
+    skinToneExpertise: artistRow.skin_tone_expertise ?? "",
   };
 
   return (

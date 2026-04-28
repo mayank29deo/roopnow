@@ -41,6 +41,8 @@ create table if not exists public.artists (
   cancellation_policy text default '',
   -- declaration (boolean agreement)
   agreed_to_terms boolean default false,
+  -- skin tones the artist has expertise with (comma-separated tags: Brown, Dusky, Wheatish, Light)
+  skin_tone_expertise text not null default '',
   -- analytics
   profile_views int not null default 0,
   created_at    timestamptz not null default now()
@@ -55,6 +57,7 @@ alter table public.artists add column if not exists bank_ifsc text;
 alter table public.artists add column if not exists bank_account_no text;
 alter table public.artists add column if not exists cancellation_policy text default '';
 alter table public.artists add column if not exists agreed_to_terms boolean default false;
+alter table public.artists add column if not exists skin_tone_expertise text not null default '';
 alter table public.artists add column if not exists profile_views int not null default 0;
 
 create table if not exists public.portfolio_items (

@@ -11,6 +11,7 @@ type RawArtistWithRelations = {
   avatar_url: string;
   cover_url: string;
   specialties: string;
+  skin_tone_expertise?: string;
   years_exp?: number;
   instagram?: string | null;
   verified: boolean;
@@ -64,6 +65,7 @@ export function toProfileArtist(a: RawArtistWithRelations) {
     avatarUrl: a.avatar_url,
     coverUrl: a.cover_url,
     specialties: a.specialties,
+    skinToneExpertise: a.skin_tone_expertise ?? "",
     yearsExp: a.years_exp ?? 0,
     instagram: a.instagram ?? null,
     verified: a.verified,

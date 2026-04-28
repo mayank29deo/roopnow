@@ -30,6 +30,7 @@ export async function PATCH(req: NextRequest) {
       bank_account_no: body.bankAccountNo || null,
       cancellation_policy: body.cancellationPolicy ?? "",
       agreed_to_terms: !!body.agreedToTerms,
+      skin_tone_expertise: body.skinToneExpertise ?? "",
     })
     .eq("id", user.artistId)
     .select()
