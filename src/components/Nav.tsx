@@ -98,12 +98,16 @@ export function Nav({ user }: { user: User }) {
                         <p className="text-sm font-medium truncate">{user.name}</p>
                       </div>
                       <Link
-                        href={user.role === "artist" ? "/artist/dashboard" : "/dashboard"}
+                        href={
+                          user.role === "admin" ? "/admin"
+                          : user.role === "artist" ? "/artist/dashboard"
+                          : "/dashboard"
+                        }
                         className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-surface-2"
                       >
                         <LayoutDashboard size={16} /> Dashboard
                       </Link>
-                      {user.role !== "artist" && (
+                      {user.role === "customer" && (
                         <Link
                           href="/for-artists"
                           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-surface-2"
@@ -166,7 +170,11 @@ export function Nav({ user }: { user: User }) {
               {user ? (
                 <>
                   <Link
-                    href={user.role === "artist" ? "/artist/dashboard" : "/dashboard"}
+                    href={
+                      user.role === "admin" ? "/admin"
+                      : user.role === "artist" ? "/artist/dashboard"
+                      : "/dashboard"
+                    }
                     className="btn-ghost"
                   >
                     Dashboard

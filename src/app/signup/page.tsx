@@ -8,7 +8,13 @@ export default async function SignupPage({
   searchParams: Promise<{ role?: string }>;
 }) {
   const user = await getSessionUser();
-  if (user) redirect(user.role === "artist" ? "/artist/dashboard" : "/dashboard");
+  if (user) {
+    redirect(
+      user.role === "admin" ? "/admin"
+      : user.role === "artist" ? "/artist/dashboard"
+      : "/dashboard"
+    );
+  }
   const { role } = await searchParams;
   const defaultRole = role === "artist" ? "artist" : "customer";
   return <AuthForm mode="signup" defaultRole={defaultRole} />;

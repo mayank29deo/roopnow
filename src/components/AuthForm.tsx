@@ -9,6 +9,7 @@ import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup";
 type Role = "customer" | "artist";
+type AnyRole = Role | "admin";
 
 export function AuthForm({
   mode,
@@ -40,9 +41,9 @@ export function AuthForm({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong");
-      const r = data.role as Role | undefined;
+      const r = data.role as AnyRole | undefined;
       router.refresh();
-      router.push(r === "artist" ? "/artist/dashboard" : "/dashboard");
+      router.push(r === "admin" ? "/admin" : r === "artist" ? "/artist/dashboard" : "/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

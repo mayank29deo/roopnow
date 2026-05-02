@@ -10,9 +10,14 @@ create table if not exists public.profiles (
   email      text not null,
   name       text not null,
   phone      text,
-  role       text not null default 'customer' check (role in ('customer', 'artist')),
+  role       text not null default 'customer' check (role in ('customer', 'artist', 'admin')),
   created_at timestamptz not null default now()
 );
+
+-- Existing installs: widen the role check to include 'admin'.
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in ('customer', 'artist', 'admin'));
 
 create table if not exists public.artists (
   id            uuid primary key default gen_random_uuid(),

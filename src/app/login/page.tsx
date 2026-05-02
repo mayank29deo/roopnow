@@ -4,6 +4,12 @@ import { redirect } from "next/navigation";
 
 export default async function LoginPage() {
   const user = await getSessionUser();
-  if (user) redirect(user.role === "artist" ? "/artist/dashboard" : "/dashboard");
+  if (user) {
+    redirect(
+      user.role === "admin" ? "/admin"
+      : user.role === "artist" ? "/artist/dashboard"
+      : "/dashboard"
+    );
+  }
   return <AuthForm mode="login" />;
 }

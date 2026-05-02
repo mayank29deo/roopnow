@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // If the signed-in user is an artist, send them to the artist dashboard instead.
+      // Send the signed-in user to the right dashboard for their role.
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
           .select("role")
           .eq("id", user.id)
           .maybeSingle();
-        const dest = profile?.role === "artist" ? "/artist/dashboard" : next;
+        const dest =
+          profile?.role === "admin" ? "/admin"
+          : profile?.role === "artist" ? "/artist/dashboard"
+          : next;
         return NextResponse.redirect(`${origin}${dest}`);
       }
       return NextResponse.redirect(`${origin}${next}`);
