@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, ChevronLeft, ChevronRight, Check, Clock, Calendar,
-  Sparkles, Loader2, MapPin, LogIn, IndianRupee, PartyPopper,
+  Sparkles, Loader2, MapPin, LogIn, IndianRupee, PartyPopper, Phone,
 } from "lucide-react";
 import { formatPrice, formatDateLong } from "@/lib/utils";
 import { format } from "date-fns";
@@ -40,6 +40,7 @@ export function BookingDrawer({
   const [eventName, setEventName] = useState("");
   const [budget, setBudget] = useState("");
   const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,13 +52,14 @@ export function BookingDrawer({
     setEventName("");
     setBudget("");
     setAddress("");
+    setPhone("");
     setNotes("");
     setError(null);
     onClose();
   }
 
   async function confirm() {
-    if (!service || !date || !slot || !eventName || !address) return;
+    if (!service || !date || !slot || !eventName || !address || !phone) return;
     setLoading(true);
     setError(null);
     try {
@@ -72,6 +74,7 @@ export function BookingDrawer({
           eventName,
           budget: budget ? Number(budget) : undefined,
           address,
+          phone,
           notes,
         }),
       });
@@ -88,7 +91,7 @@ export function BookingDrawer({
 
   const open = service !== null;
   const canContinueStep2 = date && slot;
-  const canSubmit = !!(address && eventName);
+  const canSubmit = !!(address && eventName && phone);
 
   return (
     <AnimatePresence>
@@ -253,6 +256,24 @@ export function BookingDrawer({
                       placeholder="Your home, venue, or studio address"
                       className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-gold/50 outline-none"
                     />
+                  </label>
+
+                  <label className="block mb-4">
+                    <span className="text-xs uppercase tracking-widest text-ink-dim mb-2 block flex items-center gap-1.5">
+                      <Phone size={12} className="text-gold" /> Mobile / WhatsApp number
+                    </span>
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+91 98XXX XXXXX"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-gold/50 outline-none"
+                    />
+                    <span className="text-[11px] text-ink-dim mt-1.5 block">
+                      The Artist will use this to confirm logistics and reach you on the day.
+                    </span>
                   </label>
 
                   <label className="block mb-4">

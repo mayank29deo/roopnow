@@ -9,6 +9,7 @@ type BookingJoin = {
   id: string; date: string; time_slot: string; status: string;
   total_price: number; notes: string | null; address: string | null;
   event_name: string | null; budget: number | null; rejection_reason: string | null;
+  customer_phone: string | null;
   profiles: { name: string; email: string; phone: string | null } | null;
   services: { name: string; category: string; duration: number } | null;
 };
@@ -27,7 +28,7 @@ export default async function ArtistDashboard() {
     supabase.from("bookings")
       .select(`
         id, date, time_slot, status, total_price, notes, address,
-        event_name, budget, rejection_reason,
+        event_name, budget, rejection_reason, customer_phone,
         profiles ( name, email, phone ),
         services ( name, category, duration )
       `)
@@ -105,7 +106,7 @@ export default async function ArtistDashboard() {
         budget: b.budget,
         rejectionReason: b.rejection_reason,
         customerName: b.profiles?.name ?? "—",
-        customerPhone: b.profiles?.phone ?? null,
+        customerPhone: b.customer_phone ?? b.profiles?.phone ?? null,
         customerEmail: b.profiles?.email ?? null,
         serviceName: b.services?.name ?? "—",
         serviceCategory: b.services?.category ?? "",

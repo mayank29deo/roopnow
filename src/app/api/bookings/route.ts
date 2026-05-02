@@ -12,6 +12,7 @@ const schema = z.object({
   budget: z.number().int().nonnegative().optional(),
   notes: z.string().optional(),
   address: z.string().min(1, "Address is required"),
+  phone: z.string().min(7, "A reachable phone number is required"),
 });
 
 export async function POST(req: NextRequest) {
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
         budget: data.budget ?? null,
         notes: data.notes ?? null,
         address: data.address,
+        customer_phone: data.phone,
         status: "pending",
       })
       .select("id")

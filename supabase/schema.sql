@@ -93,6 +93,7 @@ create table if not exists public.bookings (
   address     text,
   event_name  text,
   budget      int,
+  customer_phone text,
   rejection_reason text,
   created_at  timestamptz not null default now()
 );
@@ -100,6 +101,7 @@ create table if not exists public.bookings (
 -- Existing installs: widen the status check and add new columns.
 alter table public.bookings add column if not exists event_name text;
 alter table public.bookings add column if not exists budget int;
+alter table public.bookings add column if not exists customer_phone text;
 alter table public.bookings add column if not exists rejection_reason text;
 alter table public.bookings drop constraint if exists bookings_status_check;
 alter table public.bookings add constraint bookings_status_check

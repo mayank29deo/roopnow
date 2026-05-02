@@ -43,9 +43,9 @@ export async function notifyBookingRequested(bookingId: string) {
   const { data } = await admin
     .from("bookings")
     .select(`
-      id, date, time_slot, address, event_name, total_price, notes,
+      id, date, time_slot, address, event_name, total_price, notes, customer_phone,
       artists ( display_name, user_id, profiles:profiles!artists_user_id_fkey ( email ) ),
-      profiles ( name, email ),
+      profiles ( name, email, phone ),
       services ( name )
     `)
     .eq("id", bookingId)
@@ -55,8 +55,9 @@ export async function notifyBookingRequested(bookingId: string) {
   type Row = {
     date: string; time_slot: string; address: string | null;
     event_name: string | null; total_price: number; notes: string | null;
+    customer_phone: string | null;
     artists: { display_name: string; profiles: { email: string } | null } | null;
-    profiles: { name: string; email: string } | null;
+    profiles: { name: string; email: string; phone: string | null } | null;
     services: { name: string } | null;
   };
   const b = data as unknown as Row;
@@ -64,6 +65,7 @@ export async function notifyBookingRequested(bookingId: string) {
   const artistEmail = b.artists?.profiles?.email;
   const artistName = b.artists?.display_name ?? "there";
   const customer = b.profiles;
+  const customerPhone = b.customer_phone ?? customer?.phone ?? null;
 
   if (artistEmail) {
     await send({
@@ -78,6 +80,7 @@ export async function notifyBookingRequested(bookingId: string) {
             <li><strong>Service:</strong> ${b.services?.name ?? "—"}</li>
             <li><strong>When:</strong> ${formatDateLong(new Date(b.date))} at ${b.time_slot}</li>
             <li><strong>Location:</strong> ${b.address ?? "—"}</li>
+            ${customerPhone ? `<li><strong>Phone / WhatsApp:</strong> ${customerPhone}</li>` : ""}
             <li><strong>Total:</strong> ${formatPrice(b.total_price)}</li>
             ${b.notes ? `<li><strong>Notes:</strong> ${b.notes}</li>` : ""}
           </ul>
