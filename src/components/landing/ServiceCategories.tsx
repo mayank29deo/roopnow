@@ -59,8 +59,9 @@ export function ServiceCategories() {
               Services
             </div>
             <h2 className="font-display text-5xl lg:text-7xl leading-[0.95]">
-              What are you getting{" "}
-              <span className="italic text-gradient-primary">ready</span> for?
+              One platform.
+              <br />
+              Every <span className="italic text-gradient-primary">occasion</span>.
             </h2>
           </div>
           <Link href="/services" className="btn-ghost group shrink-0">
