@@ -4,14 +4,11 @@ import { motion } from "framer-motion";
 import { Sparkles, ArrowRight, Star, Play } from "lucide-react";
 
 const marqueeArtists = [
-  "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1503104834685-7205e8607eb9?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1526045478516-99145907023c?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1560421741-50d22348c54a?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1562572159-4efc207f5aff?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1571908599407-cdb918ed83bf?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1506863530036-1efeddceb993?w=600&h=800&fit=crop",
+  "/landing/portfolio-1.jpg",
+  "/landing/portfolio-2.jpg",
+  "/landing/portfolio-4.jpg",
+  "/landing/portfolio-5.jpg",
+  "/landing/portfolio-6.jpg",
 ];
 
 export function Hero() {
@@ -82,9 +79,9 @@ export function Hero() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="mt-8 text-lg text-ink-dim max-w-xl leading-relaxed"
             >
-              Weddings. Editorial shoots. Fashion weeks. First dates. Whatever the
-              occasion — discover verified makeup Artists, hairstylists and beauty
-              pros who turn moments into memories.
+              Weddings. Birthday Glam. Editorial shoots. Fashion Weeks.
+              Whatever the occasion — discover verified makeup Artists,
+              hairstylists and beauty pros who turn moments into memories.
             </motion.p>
 
             <motion.div
@@ -148,7 +145,7 @@ export function Hero() {
       <div className="mt-20 lg:mt-32 relative overflow-hidden">
         <div className="flex items-center gap-3 mb-6 px-5 lg:px-8 max-w-7xl mx-auto">
           <div className="h-px bg-gold/30 flex-1" />
-          <span className="text-xs uppercase tracking-widest text-gold">Featured Portfolio Moments</span>
+          <span className="text-xs uppercase tracking-widest text-gold">Different Makeup Looks, on One Platform</span>
           <div className="h-px bg-gold/30 flex-1" />
         </div>
         <Marquee images={marqueeArtists} />
@@ -167,7 +164,7 @@ function HeroCollage() {
         className="absolute left-0 top-8 w-[48%] h-[60%] rounded-3xl overflow-hidden glow-rose"
       >
         <img
-          src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=700&h=900&fit=crop"
+          src="/landing/hero-1.jpg"
           alt=""
           className="w-full h-full object-cover"
         />
@@ -192,7 +189,7 @@ function HeroCollage() {
         className="absolute right-0 top-0 w-[52%] h-[55%] rounded-3xl overflow-hidden glow-gold"
       >
         <img
-          src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=700&h=900&fit=crop"
+          src="/landing/hero-2.jpg"
           alt=""
           className="w-full h-full object-cover"
         />
@@ -205,7 +202,7 @@ function HeroCollage() {
         className="absolute right-8 bottom-4 w-[58%] h-[45%] rounded-3xl overflow-hidden shadow-2xl"
       >
         <img
-          src="https://images.unsplash.com/photo-1503104834685-7205e8607eb9?w=900&h=700&fit=crop"
+          src="/landing/hero-3.jpg"
           alt=""
           className="w-full h-full object-cover"
         />

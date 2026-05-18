@@ -732,7 +732,7 @@ function ServiceEditor({ initial, artistId, onClose, onSaved }: {
   return <Modal title={isEdit ? "Edit service" : "New service"} onClose={onClose}>
     <div className="space-y-4">
       <ModalField label="Service name"><input value={name} onChange={(e) => setName(e.target.value)} className="dash-input" placeholder="e.g. Bridal Full Look" /></ModalField>
-      <ModalField label="Category"><select value={category} onChange={(e) => setCategory(e.target.value)} className="dash-input">{["Bridal","Party & Glam","Editorial & HD","Men's Grooming","Hair & Style","SFX & Artistic"].map((c) => <option key={c}>{c}</option>)}</select></ModalField>
+      <ModalField label="Category"><select value={category} onChange={(e) => setCategory(e.target.value)} className="dash-input">{["Bridal","Party & Glam","Editorial","His Look","Just the Hair","Family Makeup"].map((c) => <option key={c}>{c}</option>)}</select></ModalField>
       <ModalField label="Description"><textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} className="dash-input resize-none" /></ModalField>
       <Grid>
         <ModalField label="Duration (min)"><input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="dash-input" min={15} step={15} /></ModalField>

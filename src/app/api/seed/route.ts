@@ -26,7 +26,7 @@ const artistData = [
       { name: "Bridal Full Look", description: "Full bridal makeup + hair styling for your wedding day. Includes trial, touch-up kit, and 12-hour wear-proof finish.", duration: 180, price: 35000, category: "Bridal" },
       { name: "Bridal Trial", description: "A pre-wedding trial to nail your look. Photos, feedback, and full styling.", duration: 120, price: 8000, category: "Bridal" },
       { name: "Sangeet / Reception", description: "Glam look for your evening events. Hair included.", duration: 120, price: 18000, category: "Party & Glam" },
-      { name: "Editorial Shoot", description: "Magazine-level HD makeup for campaigns, shoots, and portfolios.", duration: 90, price: 12000, category: "Editorial & HD" },
+      { name: "Editorial Shoot", description: "Magazine-level HD makeup for campaigns, shoots, and portfolios.", duration: 90, price: 12000, category: "Editorial" },
     ],
   },
   {
@@ -47,9 +47,9 @@ const artistData = [
       "https://images.unsplash.com/photo-1571908599407-cdb918ed83bf?w=900&h=1100&fit=crop",
     ],
     services: [
-      { name: "Editorial Shoot", description: "Print/digital campaign makeup with HD finish.", duration: 120, price: 15000, category: "Editorial & HD" },
-      { name: "Runway Look", description: "Full runway-ready face + hair, camera tested.", duration: 90, price: 12000, category: "Editorial & HD" },
-      { name: "SFX / Avant-garde", description: "Prosthetics, color blocking, creative direction.", duration: 180, price: 22000, category: "SFX & Artistic" },
+      { name: "Editorial Shoot", description: "Print/digital campaign makeup with HD finish.", duration: 120, price: 15000, category: "Editorial" },
+      { name: "Runway Look", description: "Full runway-ready face + hair, camera tested.", duration: 90, price: 12000, category: "Editorial" },
+      { name: "SFX / Avant-garde", description: "Prosthetics, color blocking, creative direction.", duration: 180, price: 22000, category: "Family Makeup" },
       { name: "Party Glam", description: "Bold, unapologetic evening look.", duration: 90, price: 9000, category: "Party & Glam" },
     ],
   },
@@ -81,7 +81,7 @@ const artistData = [
     city: "Bengaluru", area: "Indiranagar",
     avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
     cover_url: "https://images.unsplash.com/photo-1581992652564-44c42f5ad3ad?w=1600&h=900&fit=crop",
-    specialties: "Men's Grooming,Bridal,Editorial",
+    specialties: "His Look,Bridal,Editorial",
     years_exp: 6, instagram: "vikram.grooms", featured: true, verified: true,
     portfolio: [
       "https://images.unsplash.com/photo-1581992652564-44c42f5ad3ad?w=900&h=1100&fit=crop",
@@ -90,9 +90,9 @@ const artistData = [
       "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=900&h=1100&fit=crop",
     ],
     services: [
-      { name: "Groom's Wedding Look", description: "Full grooming for your big day — skin, beard, hair, finish.", duration: 90, price: 12000, category: "Men's Grooming" },
-      { name: "Beard Sculpting & Skin", description: "Sharp beard work + HD skin prep for events.", duration: 60, price: 4500, category: "Men's Grooming" },
-      { name: "Editorial Men's", description: "Print/campaign work for male models.", duration: 60, price: 8000, category: "Editorial & HD" },
+      { name: "Groom's Wedding Look", description: "Full grooming for your big day — skin, beard, hair, finish.", duration: 90, price: 12000, category: "His Look" },
+      { name: "Beard Sculpting & Skin", description: "Sharp beard work + HD skin prep for events.", duration: 60, price: 4500, category: "His Look" },
+      { name: "Editorial Men's", description: "Print/campaign work for male models.", duration: 60, price: 8000, category: "Editorial" },
     ],
   },
   {
@@ -111,9 +111,9 @@ const artistData = [
       "https://images.unsplash.com/photo-1526045478516-99145907023c?w=900&h=1100&fit=crop",
     ],
     services: [
-      { name: "Bridal Hair + Trial", description: "Trial + wedding-day hair styling, lasts 12+ hours.", duration: 120, price: 18000, category: "Hair & Style" },
-      { name: "Blowout & Style", description: "Fresh blowout for events. Zero frizz.", duration: 60, price: 3500, category: "Hair & Style" },
-      { name: "Color & Gloss", description: "Full color, balayage, highlights. Consultation included.", duration: 180, price: 9500, category: "Hair & Style" },
+      { name: "Bridal Hair + Trial", description: "Trial + wedding-day hair styling, lasts 12+ hours.", duration: 120, price: 18000, category: "Just the Hair" },
+      { name: "Blowout & Style", description: "Fresh blowout for events. Zero frizz.", duration: 60, price: 3500, category: "Just the Hair" },
+      { name: "Color & Gloss", description: "Full color, balayage, highlights. Consultation included.", duration: 180, price: 9500, category: "Just the Hair" },
     ],
   },
   {
@@ -134,7 +134,7 @@ const artistData = [
     services: [
       { name: "South Bridal Package", description: "Muhurtham + reception full package with 2 looks.", duration: 300, price: 45000, category: "Bridal" },
       { name: "Muhurtham Look", description: "Traditional bridal for the ceremony.", duration: 180, price: 28000, category: "Bridal" },
-      { name: "Pre-wedding Shoot", description: "Half-day shoot package with multiple looks.", duration: 240, price: 20000, category: "Editorial & HD" },
+      { name: "Pre-wedding Shoot", description: "Half-day shoot package with multiple looks.", duration: 240, price: 20000, category: "Editorial" },
     ],
   },
   {
@@ -152,8 +152,8 @@ const artistData = [
       "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=900&h=1100&fit=crop",
     ],
     services: [
-      { name: "Film SFX", description: "Prosthetics, wounds, aging, fantasy. Full-day on set.", duration: 480, price: 40000, category: "SFX & Artistic" },
-      { name: "TV / Commercial", description: "Camera-ready makeup for shoot day.", duration: 120, price: 15000, category: "Editorial & HD" },
+      { name: "Film SFX", description: "Prosthetics, wounds, aging, fantasy. Full-day on set.", duration: 480, price: 40000, category: "Family Makeup" },
+      { name: "TV / Commercial", description: "Camera-ready makeup for shoot day.", duration: 120, price: 15000, category: "Editorial" },
     ],
   },
   {

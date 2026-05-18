@@ -35,11 +35,11 @@ export default async function Home() {
       <LandingIntro />
       <Hero />
       <Stats />
-      <ServiceCategories />
+      <ArtistCTA />
       {featured.length > 0 && <FeaturedArtists artists={featured} />}
       <HowItWorks />
       <Testimonials />
-      <ArtistCTA />
+      <ServiceCategories />
       <FinalCTA />
     </>
   );
