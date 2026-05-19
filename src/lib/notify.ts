@@ -1,46 +1,40 @@
-// Email notifications via Gmail SMTP (nodemailer). Graceful no-op if
-// GMAIL_USER / GMAIL_APP_PASSWORD aren't set, so the app keeps working
-// even before email is wired up.
+// Email notifications via Resend (verified roopnow.com domain).
+// Graceful no-op if RESEND_API_KEY isn't set, so dev/preview keeps
+// working without secrets.
 //
-// Note: Gmail caps a personal account at ~500 sends/day. Move to a
-// transactional provider (Resend / Postmark / SES) once volume grows.
+// FROM is the branded sender (e.g. "Roop <hello@roopnow.com>"); replies
+// route to MAIL_REPLY_TO (Suraksha's working inbox) via the Reply-To
+// header so users hitting Reply always land in a real human's mailbox.
 
-import nodemailer, { type Transporter } from "nodemailer";
 import { createAdminClient } from "./supabase/admin";
 import { formatPrice, formatDateLong } from "./utils";
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
-const FROM_NAME = process.env.MAIL_FROM_NAME || "Roop";
+const API = "https://api.resend.com/emails";
+const FROM = process.env.MAIL_FROM || "Roop <hello@roopnow.com>";
+const REPLY_TO = process.env.MAIL_REPLY_TO || "surakshawork20@gmail.com";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://roopnow.com";
 
-let cachedTransporter: Transporter | null = null;
-function getTransporter(): Transporter | null {
-  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) return null;
-  if (!cachedTransporter) {
-    cachedTransporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
-    });
-  }
-  return cachedTransporter;
-}
-
 async function send(opts: { to: string | string[]; subject: string; html: string }) {
-  const t = getTransporter();
-  if (!t) {
-    console.log("[notify] Gmail SMTP not configured, skipping:", opts.subject, "→", opts.to);
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.log("[notify] RESEND_API_KEY unset, skipping email:", opts.subject, "→", opts.to);
     return;
   }
   try {
-    await t.sendMail({
-      from: `${FROM_NAME} <${GMAIL_USER}>`,
-      to: opts.to,
-      subject: opts.subject,
-      html: opts.html,
+    const res = await fetch(API, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: FROM,
+        to: opts.to,
+        subject: opts.subject,
+        html: opts.html,
+        reply_to: REPLY_TO,
+      }),
     });
+    if (!res.ok) console.error("[notify] resend error", res.status, await res.text());
   } catch (err) {
-    console.error("[notify] gmail send failed", err);
+    console.error("[notify] send failed", err);
   }
 }
 
