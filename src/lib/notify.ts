@@ -555,13 +555,73 @@ function artistWelcomeHtml(firstName: string) {
 }
 
 function customerWelcomeHtml(firstName: string) {
-  const welcomeUrl = `${SITE_URL}/welcome?name=${encodeURIComponent(firstName)}`;
-  return brandedEmail({
-    title: "Something special is waiting,",
-    titleAccent: `${firstName}.`,
-    intro: "We&rsquo;ve laid out your moment. One tap, and you&rsquo;re inside.",
-    ctas: [{ label: "Step inside", url: welcomeUrl, primary: true }],
-    signoff: "&mdash; The Roop team",
-    footerNote: "You received this because you just joined Roop. We keep nudges rare and meaningful.",
-  });
+  // Customer welcome is image-driven: a looping GIF of a gold envelope
+  // opening and a letter rising out of it carries the brand moment.
+  // The body copy stays under 20 words, with one gold CTA → /discover.
+  // No /welcome bounce — the magic lives inside the inbox.
+  const heroUrl = `${SITE_URL}/email-hero.gif`;
+  const ctaUrl = `${SITE_URL}/discover`;
+  const namePart = firstName
+    ? `<span style="font-style:italic;color:#E8B86D;">${firstName}</span>.`
+    : "to your moment.";
+
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Welcome to Roop</title>
+  </head>
+  <body style="margin:0;padding:0;background:#1A0710;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#1A0710;padding:40px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;background:#2A0D18;border:1px solid rgba(201,169,126,0.22);border-radius:24px;overflow:hidden;">
+
+            <tr><td style="height:4px;background:linear-gradient(90deg,#E8B86D,#D4B586,#A8875E);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+            <tr>
+              <td style="padding:0;font-size:0;line-height:0;">
+                <a href="${ctaUrl}" style="display:block;text-decoration:none;">
+                  <img src="${heroUrl}" alt="Welcome to Roop" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;text-decoration:none;" />
+                </a>
+              </td>
+            </tr>
+
+            <tr>
+              <td align="center" style="padding:32px 40px 8px;">
+                <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.2;color:#F5E9D7;margin:0;font-weight:normal;">
+                  Welcome${firstName ? "," : ""} ${namePart}
+                </h1>
+              </td>
+            </tr>
+
+            <tr>
+              <td align="center" style="padding:0 40px 4px;">
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#D4B896;margin:0;">Your moment is ready.</p>
+              </td>
+            </tr>
+
+            <tr>
+              <td align="center" style="padding:26px 40px 36px;">
+                <a href="${ctaUrl}" style="display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#E8B86D,#A8875E);color:#1A0710;text-decoration:none;border-radius:999px;font-weight:600;font-size:14px;font-family:Arial,Helvetica,sans-serif;">Begin</a>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:20px 40px 24px;border-top:1px solid rgba(201,169,126,0.12);background:rgba(26,7,16,0.45);">
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#8A6D5C;margin:0;line-height:1.6;text-align:center;">
+                  <a href="${SITE_URL}" style="color:#C9A97E;text-decoration:none;">roopnow.com</a>
+                  &nbsp;&middot;&nbsp;
+                  You received this because you just joined Roop. We keep nudges rare and meaningful.
+                </p>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }
