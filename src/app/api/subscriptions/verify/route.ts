@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "crypto";
 import { getSessionUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifySubscriptionPaid } from "@/lib/notify";
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
@@ -34,6 +35,8 @@ export async function POST(req: NextRequest) {
     .eq("id", subscriptionId)
     .eq("artist_id", user.artistId);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  notifySubscriptionPaid(subscriptionId).catch((e) => console.error("notify failed:", e));
 
   return NextResponse.json({ ok: true });
 }

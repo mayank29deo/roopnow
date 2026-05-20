@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getSessionUser } from "@/lib/supabase/server";
 import { z } from "zod";
-import { notifyBookingDecided } from "@/lib/notify";
+import {
+  notifyBookingDecided,
+  notifyBookingCompleted,
+  notifyBookingCancelledByCustomer,
+} from "@/lib/notify";
 
 // Customer cancels their own pending/accepted booking.
 export async function DELETE(
@@ -13,12 +17,28 @@ export async function DELETE(
   const { id } = await params;
 
   const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("bookings")
+    .select("user_id, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!existing || existing.user_id !== user.id) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  // Only notify if the slot was actually held — silent if it was already
+  // rejected / completed / cancelled.
+  const wasLive = existing.status === "pending" || existing.status === "accepted";
+
   const { error } = await supabase
     .from("bookings")
     .update({ status: "cancelled" })
     .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  if (wasLive) {
+    notifyBookingCancelledByCustomer(id).catch((e) => console.error("notify failed:", e));
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -75,6 +95,8 @@ export async function PATCH(
 
   if (body.action === "accept" || body.action === "reject") {
     notifyBookingDecided(id, body.action, body.reason).catch((e) => console.error("notify failed:", e));
+  } else if (body.action === "complete") {
+    notifyBookingCompleted(id).catch((e) => console.error("notify failed:", e));
   }
 
   return NextResponse.json({ ok: true, booking: data });
