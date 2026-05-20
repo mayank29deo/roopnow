@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 // ends on the SAME state so the looped GIF reads as continuous motion
 // with no jump between iterations.
 
-const DURATION = 3;
+const DURATION = 6;
 
 export default function EmailHero() {
   return (
@@ -48,7 +48,7 @@ export default function EmailHero() {
           }}
           transition={{
             duration: DURATION,
-            times: [0, 0.32, 0.5, 0.7, 0.85, 1],
+            times: [0, 0.32, 0.42, 0.7, 0.82, 1],
             repeat: Infinity,
             delay: s.delay,
           }}
@@ -89,15 +89,17 @@ export default function EmailHero() {
           }}
         />
 
-        {/* Letter that rises out of the envelope */}
+        {/* Letter that rises out of the envelope. Holds fully extended
+            for ~2s (cycle position 0.40 → 0.70) so the recipient has
+            time to read "Welcome to Roop". */}
         <motion.div
           animate={{
             y: [50, 50, -110, -110, 50, 50],
-            opacity: [0, 0.4, 1, 1, 0.4, 0],
+            opacity: [0, 0, 1, 1, 0, 0],
           }}
           transition={{
             duration: DURATION,
-            times: [0, 0.2, 0.42, 0.66, 0.86, 1],
+            times: [0, 0.22, 0.40, 0.70, 0.82, 1],
             repeat: Infinity,
             ease: [0.16, 1, 0.3, 1],
           }}
@@ -175,14 +177,17 @@ export default function EmailHero() {
           }}
         />
 
-        {/* Flap — triangle, hinged at top, rotates back to open the envelope */}
+        {/* Flap — triangle, hinged at top, rotates back to open the
+            envelope. Opens by cycle position 0.20 (well before the
+            letter starts rising at 0.22) and stays open until 0.82
+            (just after the letter has retreated). */}
         <motion.div
           animate={{
             rotateX: [0, 0, -175, -175, 0, 0],
           }}
           transition={{
             duration: DURATION,
-            times: [0, 0.12, 0.32, 0.72, 0.92, 1],
+            times: [0, 0.06, 0.20, 0.82, 0.94, 1],
             repeat: Infinity,
             ease: [0.16, 1, 0.3, 1],
           }}
@@ -210,7 +215,7 @@ export default function EmailHero() {
           }}
           transition={{
             duration: DURATION,
-            times: [0, 0.13, 0.26, 0.78, 0.92, 1],
+            times: [0, 0.08, 0.18, 0.84, 0.94, 1],
             repeat: Infinity,
             ease: [0.16, 1, 0.3, 1],
           }}
@@ -247,7 +252,7 @@ export default function EmailHero() {
         }}
         transition={{
           duration: DURATION,
-          times: [0, 0.32, 0.5, 0.66, 0.85, 1],
+          times: [0, 0.32, 0.42, 0.70, 0.82, 1],
           repeat: Infinity,
         }}
         style={{

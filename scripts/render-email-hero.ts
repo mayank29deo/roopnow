@@ -22,8 +22,8 @@ const OUT = join(ROOT, "public", "email-hero.gif");
 const URL = "http://localhost:4001/internal/email-hero";
 const VIEWPORT = { width: 600, height: 400 };
 const DEVICE_SCALE = 2;
-const FPS = 24;
-const DURATION_SEC = 3;
+const FPS = 20;
+const DURATION_SEC = 6;
 const FRAMES = FPS * DURATION_SEC;
 const FRAME_INTERVAL_MS = 1000 / FPS;
 
