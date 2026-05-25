@@ -56,17 +56,20 @@ export function AuthForm({
     setLoading(true);
     try {
       const supabase = createBrowserSupabase();
-      // For signup, attach the chosen role to the callback URL so the
-      // server can upgrade fresh OAuth profiles to artist when intended.
-      // (The Postgres trigger defaults OAuth signups to customer because
-      // Google's raw_user_meta_data doesn't carry a role.)
-      const callback =
-        mode === "signup"
-          ? `${window.location.origin}/auth/callback?role=${role}`
-          : `${window.location.origin}/auth/callback`;
+      // Stash the role intent in a short-lived cookie before kicking off
+      // OAuth. We can't put role in the redirectTo URL — Supabase's
+      // redirect allowlist would reject the URL with extra query params
+      // and silently fall back to the Site URL (home page), aborting
+      // the flow. The callback reads this cookie server-side and
+      // clears it once consumed.
+      if (mode === "signup") {
+        document.cookie = `roop_signup_role=${role}; path=/; max-age=600; SameSite=Lax`;
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: callback },
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
       if (error) throw error;
       // If we reach this line it means the redirect didn't happen; show the error.

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyWelcome } from "@/lib/notify";
@@ -7,16 +8,25 @@ import { notifyWelcome } from "@/lib/notify";
 // user authenticates. We exchange the code for a session, then route
 // the signed-in user to the right dashboard for their role.
 //
-// On a *fresh* signup that came through with ?role=artist (set on the
-// signup page when the user picked the Artist toggle), we upgrade the
-// auto-created profile from customer → artist and seed the artists
-// row that the Postgres trigger skipped (it skipped because Google's
-// raw_user_meta_data doesn't carry a role field).
+// Role intent for fresh signups is carried via a short-lived cookie
+// (set on the signup page right before signInWithOAuth) instead of a
+// URL query param — Supabase's redirect allowlist rejects redirectTo
+// URLs with extra query params and silently falls back to the Site
+// URL. When the cookie says role=artist on a fresh OAuth signup, we
+// upgrade the auto-created profile from customer → artist and seed
+// the artists row that the Postgres trigger skipped (the trigger
+// skipped because Google's raw_user_meta_data has no role field).
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard";
-  const roleIntent = searchParams.get("role");
+
+  const cookieStore = await cookies();
+  const roleIntent = cookieStore.get("roop_signup_role")?.value;
+  if (roleIntent) {
+    // Single-use — drop it now so a later login doesn't accidentally re-upgrade.
+    cookieStore.delete("roop_signup_role");
+  }
 
   if (code) {
     const supabase = await createClient();
