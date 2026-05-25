@@ -45,6 +45,16 @@ export function Nav({ user }: { user: User }) {
     router.push("/");
   }
 
+  async function upgradeToArtist() {
+    const res = await fetch("/api/auth/upgrade-to-artist", { method: "POST" });
+    if (!res.ok) {
+      console.error("Upgrade failed:", await res.text());
+      return;
+    }
+    router.refresh();
+    router.push("/artist/dashboard");
+  }
+
   return (
     <header
       className={`fixed top-0 inset-x-0 z-50 transition-all ${
@@ -108,12 +118,12 @@ export function Nav({ user }: { user: User }) {
                         <LayoutDashboard size={16} /> Dashboard
                       </Link>
                       {user.role === "customer" && (
-                        <Link
-                          href="/for-artists"
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-surface-2"
+                        <button
+                          onClick={upgradeToArtist}
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-surface-2 text-left"
                         >
                           <Sparkles size={16} /> Become an Artist
-                        </Link>
+                        </button>
                       )}
                       <button
                         onClick={signOut}

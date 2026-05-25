@@ -56,11 +56,17 @@ export function AuthForm({
     setLoading(true);
     try {
       const supabase = createBrowserSupabase();
+      // For signup, attach the chosen role to the callback URL so the
+      // server can upgrade fresh OAuth profiles to artist when intended.
+      // (The Postgres trigger defaults OAuth signups to customer because
+      // Google's raw_user_meta_data doesn't carry a role.)
+      const callback =
+        mode === "signup"
+          ? `${window.location.origin}/auth/callback?role=${role}`
+          : `${window.location.origin}/auth/callback`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { redirectTo: callback },
       });
       if (error) throw error;
       // If we reach this line it means the redirect didn't happen; show the error.
