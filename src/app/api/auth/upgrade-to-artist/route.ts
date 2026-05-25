@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -61,6 +62,10 @@ export async function POST() {
     if (insErr) return NextResponse.json({ error: insErr.message }, { status: 400 });
     artistId = inserted.id;
   }
+
+  // Bust the root layout cache so Nav re-fetches the session user and
+  // stops showing the customer-only "Become an Artist" item.
+  revalidatePath("/", "layout");
 
   return NextResponse.json({ ok: true, role: "artist", artistId });
 }

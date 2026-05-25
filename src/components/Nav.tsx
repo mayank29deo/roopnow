@@ -51,8 +51,11 @@ export function Nav({ user }: { user: User }) {
       console.error("Upgrade failed:", await res.text());
       return;
     }
-    router.refresh();
-    router.push("/artist/dashboard");
+    // Hard navigation guarantees the root layout (which renders this
+    // Nav with the user's role) re-fetches fresh session data —
+    // router.push alone re-uses the cached layout and would keep
+    // showing "Become an Artist" until the next manual reload.
+    window.location.assign("/artist/dashboard");
   }
 
   return (
