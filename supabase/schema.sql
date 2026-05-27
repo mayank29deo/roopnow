@@ -65,6 +65,29 @@ alter table public.artists add column if not exists agreed_to_terms boolean defa
 alter table public.artists add column if not exists skin_tone_expertise text not null default '';
 alter table public.artists add column if not exists profile_views int not null default 0;
 
+-- Phase 1 (May 2026): Suraksha's iteration round.
+-- Adds richer profile data, restructures payment block to non-sensitive
+-- fields, and prepares for the additional_charges sub-tab.
+alter table public.artists add column if not exists studio_name text not null default '';
+alter table public.artists add column if not exists service_mode text not null default 'studio'
+  check (service_mode in ('studio','client','both'));
+alter table public.artists add column if not exists artist_type text not null default 'solo'
+  check (artist_type in ('solo','team'));
+alter table public.artists add column if not exists max_bookings_per_day int not null default 3;
+-- Cosmetic brands — comma-separated to match the existing `specialties` /
+-- `skin_tone_expertise` pattern; the UI splits / joins around commas.
+alter table public.artists add column if not exists cosmetic_brands text not null default '';
+alter table public.artists add column if not exists outstation_available boolean not null default false;
+alter table public.artists add column if not exists outstation_conditions text not null default '';
+alter table public.artists add column if not exists acne_experience boolean not null default false;
+alter table public.artists add column if not exists acne_experience_details text not null default '';
+-- Non-sensitive payment metadata (Roop doesn't process payments — the
+-- UPI/bank fields stay on the row for safety but the UI drops them).
+alter table public.artists add column if not exists payment_structure text not null default '';
+alter table public.artists add column if not exists payment_modes text not null default '';
+alter table public.artists add column if not exists invoice_available boolean not null default false;
+alter table public.artists add column if not exists payment_notes text not null default '';
+
 create table if not exists public.portfolio_items (
   id         uuid primary key default gen_random_uuid(),
   artist_id  uuid not null references public.artists(id) on delete cascade,
@@ -84,6 +107,12 @@ create table if not exists public.services (
   category    text not null default 'Bridal',
   created_at  timestamptz not null default now()
 );
+
+-- Phase 1 (May 2026): services switch from a single description blob
+-- to explicit inclusions (green +) and exclusions (red −). `description`
+-- stays for backward compat but the UI no longer surfaces it.
+alter table public.services add column if not exists inclusions text not null default '';
+alter table public.services add column if not exists exclusions text not null default '';
 
 create table if not exists public.bookings (
   id          uuid primary key default gen_random_uuid(),
@@ -148,6 +177,18 @@ create table if not exists public.artist_events (
   created_at     timestamptz not null default now()
 );
 
+-- Phase 1 (May 2026): "Additional Charges" sub-tab — separate from the
+-- main service menu (travel, GST, early-morning, etc.). Each row is a
+-- simple name + description pair, ordered by sort_order.
+create table if not exists public.additional_charges (
+  id          uuid primary key default gen_random_uuid(),
+  artist_id   uuid not null references public.artists(id) on delete cascade,
+  name        text not null,
+  description text not null default '',
+  sort_order  int  not null default 0,
+  created_at  timestamptz not null default now()
+);
+
 -- Monthly listing-fee subscriptions.
 create table if not exists public.artist_subscriptions (
   id           uuid primary key default gen_random_uuid(),
@@ -176,6 +217,7 @@ create index if not exists idx_reviews_artist on public.reviews(artist_id, creat
 create index if not exists idx_blocked_dates_artist on public.artist_blocked_dates(artist_id, blocked_date);
 create index if not exists idx_events_artist on public.artist_events(artist_id, event_date);
 create index if not exists idx_subs_artist on public.artist_subscriptions(artist_id, period_month desc);
+create index if not exists idx_addl_charges_artist on public.additional_charges(artist_id, sort_order);
 
 -- ============================================================
 -- 3. TRIGGER: auto-create profile on auth signup
@@ -276,6 +318,7 @@ alter table public.reviews              enable row level security;
 alter table public.artist_blocked_dates enable row level security;
 alter table public.artist_events        enable row level security;
 alter table public.artist_subscriptions enable row level security;
+alter table public.additional_charges    enable row level security;
 
 -- profiles
 drop policy if exists "profiles_read_all" on public.profiles;
@@ -351,6 +394,14 @@ create policy "events_write_own" on public.artist_events for all
 drop policy if exists "subs_read_own" on public.artist_subscriptions;
 create policy "subs_read_own" on public.artist_subscriptions for select
   using (exists (select 1 from public.artists a where a.id = artist_subscriptions.artist_id and a.user_id = auth.uid()));
+
+-- additional_charges: public read (shows on artist profile), artist-only write
+drop policy if exists "addl_charges_read_all" on public.additional_charges;
+drop policy if exists "addl_charges_write_own" on public.additional_charges;
+create policy "addl_charges_read_all" on public.additional_charges for select using (true);
+create policy "addl_charges_write_own" on public.additional_charges for all
+  using (exists (select 1 from public.artists a where a.id = additional_charges.artist_id and a.user_id = auth.uid()))
+  with check (exists (select 1 from public.artists a where a.id = additional_charges.artist_id and a.user_id = auth.uid()));
 
 -- ============================================================
 -- 6. HELPER: increment profile view (safe RPC callable with anon key)
