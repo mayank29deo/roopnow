@@ -29,6 +29,9 @@ const categories = [
     name: "His Look",
     desc: "Wedding looks, beard sculpting, grooms-to-be. Yes, you deserve this.",
     img: "/landing/service-his-look.jpg",
+    // The headshot sits high in the source frame — keep the face in
+    // view instead of letting object-cover crop it off the top.
+    objectPosition: "center 20%",
     accent: "from-emerald/70 via-teal/50 to-bg",
     count: "65+ Artists",
   },
@@ -87,6 +90,7 @@ export function ServiceCategories() {
                   src={c.img}
                   alt={c.name}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  style={c.objectPosition ? { objectPosition: c.objectPosition } : undefined}
                 />
                 <div className={`absolute inset-0 bg-gradient-to-t ${c.accent} opacity-80`} />
                 <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />

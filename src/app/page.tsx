@@ -4,7 +4,6 @@ import { Stats } from "@/components/landing/Stats";
 import { ServiceCategories } from "@/components/landing/ServiceCategories";
 import { FeaturedArtists } from "@/components/landing/FeaturedArtists";
 import { HowItWorks } from "@/components/landing/HowItWorks";
-import { Testimonials } from "@/components/landing/Testimonials";
 import { ArtistCTA } from "@/components/landing/ArtistCTA";
 import { FinalCTA } from "@/components/landing/FinalCTA";
 import { LandingIntro } from "@/components/LandingIntro";
@@ -38,7 +37,6 @@ export default async function Home() {
       <ArtistCTA />
       {featured.length > 0 && <FeaturedArtists artists={featured} />}
       <HowItWorks />
-      <Testimonials />
       <ServiceCategories />
       <FinalCTA />
     </>

@@ -88,40 +88,6 @@ export function ArtistCTA() {
                   className="w-full h-full object-cover"
                 />
               </motion.div>
-              <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, delay: 0.5 }}
-                className="absolute left-0 bottom-0 glass-strong rounded-3xl p-6 w-72"
-              >
-                <div className="text-xs uppercase tracking-widest text-gold mb-2">
-                  This month
-                </div>
-                <div className="font-display text-5xl text-gradient-rose mb-1">
-                  ₹2.4L
-                </div>
-                <div className="text-sm text-ink-dim mb-6">
-                  earned by top 10% of Artists
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="flex -space-x-2">
-                    {[
-                      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80",
-                      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80",
-                      "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=80",
-                    ].map((src, i) => (
-                      <img
-                        key={i}
-                        src={src}
-                        alt=""
-                        className="w-7 h-7 rounded-full border-2 border-bg"
-                      />
-                    ))}
-                  </div>
-                  <span className="text-ink-dim">+500 Artists earning</span>
-                </div>
-              </motion.div>
             </div>
           </div>
         </motion.div>

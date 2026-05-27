@@ -100,40 +100,6 @@ export function Hero() {
               </Link>
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="mt-12 flex items-center gap-6"
-            >
-              <div className="flex -space-x-3">
-                {[
-                  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop",
-                  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop",
-                  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop",
-                  "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=80&h=80&fit=crop",
-                ].map((src, i) => (
-                  <img
-                    key={i}
-                    src={src}
-                    alt=""
-                    className="w-11 h-11 rounded-full border-2 border-bg object-cover"
-                  />
-                ))}
-                <div className="w-11 h-11 rounded-full border-2 border-bg bg-surface-2 flex items-center justify-center text-[10px] font-semibold">
-                  +500
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-0.5 mb-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={13} className="fill-gold text-gold" />
-                  ))}
-                  <span className="text-sm ml-2 font-semibold">4.9</span>
-                </div>
-                <div className="text-xs text-ink-dim">from 12,000+ bookings</div>
-              </div>
-            </motion.div>
           </div>
 
           <div className="lg:col-span-5 relative h-[520px] lg:h-[640px] hidden md:block">
