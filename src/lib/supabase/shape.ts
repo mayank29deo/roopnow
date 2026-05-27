@@ -4,6 +4,7 @@ type RawArtistWithRelations = {
   id: string;
   user_id?: string;
   display_name: string;
+  studio_name?: string;
   tagline: string;
   bio?: string;
   city: string;
@@ -12,6 +13,17 @@ type RawArtistWithRelations = {
   cover_url: string;
   specialties: string;
   skin_tone_expertise?: string;
+  cosmetic_brands?: string;
+  outstation_available?: boolean;
+  outstation_conditions?: string;
+  acne_experience?: boolean;
+  acne_experience_details?: string;
+  service_mode?: string;
+  artist_type?: string;
+  payment_structure?: string;
+  payment_modes?: string;
+  invoice_available?: boolean;
+  payment_notes?: string;
   years_exp?: number;
   instagram?: string | null;
   verified: boolean;
@@ -58,6 +70,7 @@ export function toProfileArtist(a: RawArtistWithRelations) {
   return {
     id: a.id,
     displayName: a.display_name,
+    studioName: a.studio_name ?? "",
     tagline: a.tagline,
     bio: a.bio ?? "",
     city: a.city,
@@ -66,6 +79,17 @@ export function toProfileArtist(a: RawArtistWithRelations) {
     coverUrl: a.cover_url,
     specialties: a.specialties,
     skinToneExpertise: a.skin_tone_expertise ?? "",
+    cosmeticBrands: a.cosmetic_brands ?? "",
+    outstationAvailable: a.outstation_available ?? false,
+    outstationConditions: a.outstation_conditions ?? "",
+    acneExperience: a.acne_experience ?? false,
+    acneExperienceDetails: a.acne_experience_details ?? "",
+    serviceMode: (a.service_mode ?? "studio") as "studio" | "client" | "both",
+    artistType: (a.artist_type ?? "solo") as "solo" | "team",
+    paymentStructure: a.payment_structure ?? "",
+    paymentModes: a.payment_modes ?? "",
+    invoiceAvailable: a.invoice_available ?? false,
+    paymentNotes: a.payment_notes ?? "",
     yearsExp: a.years_exp ?? 0,
     instagram: a.instagram ?? null,
     verified: a.verified,

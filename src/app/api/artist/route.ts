@@ -8,11 +8,16 @@ export async function PATCH(req: NextRequest) {
   }
   const body = await req.json();
 
+  // Whitelist enum-style fields so the artist can't write arbitrary values.
+  const allowedServiceMode = new Set(["studio", "client", "both"]);
+  const allowedArtistType = new Set(["solo", "team"]);
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("artists")
     .update({
       display_name: body.displayName,
+      studio_name: body.studioName ?? "",
       tagline: body.tagline,
       bio: body.bio,
       city: body.city,
@@ -24,10 +29,20 @@ export async function PATCH(req: NextRequest) {
       instagram: body.instagram || null,
       experience_summary: body.experienceSummary ?? "",
       travel_radius_km: body.travelRadiusKm ?? 0,
-      upi_id: body.upiId || null,
-      bank_account_name: body.bankAccountName || null,
-      bank_ifsc: body.bankIfsc || null,
-      bank_account_no: body.bankAccountNo || null,
+      service_mode: allowedServiceMode.has(body.serviceMode) ? body.serviceMode : "studio",
+      artist_type: allowedArtistType.has(body.artistType) ? body.artistType : "solo",
+      max_bookings_per_day: Math.max(1, Number(body.maxBookingsPerDay) || 3),
+      cosmetic_brands: body.cosmeticBrands ?? "",
+      outstation_available: !!body.outstationAvailable,
+      outstation_conditions: body.outstationConditions ?? "",
+      acne_experience: !!body.acneExperience,
+      acne_experience_details: body.acneExperienceDetails ?? "",
+      payment_structure: body.paymentStructure ?? "",
+      payment_modes: body.paymentModes ?? "",
+      invoice_available: !!body.invoiceAvailable,
+      payment_notes: body.paymentNotes ?? "",
+      // Legacy bank/UPI columns left untouched — UI no longer surfaces them
+      // but we don't want a save to wipe out values an artist already entered.
       cancellation_policy: body.cancellationPolicy ?? "",
       agreed_to_terms: !!body.agreedToTerms,
       skin_tone_expertise: body.skinToneExpertise ?? "",

@@ -19,11 +19,26 @@ import { isoDay } from "@/lib/availability";
 import { format } from "date-fns";
 
 type Artist = {
-  id: string; displayName: string; tagline: string; bio: string;
+  id: string; displayName: string; studioName: string;
+  tagline: string; bio: string;
   city: string; area: string; avatarUrl: string; coverUrl: string;
   specialties: string; yearsExp: number; instagram: string | null;
   verified: boolean; featured: boolean; profileViews: number;
   experienceSummary: string; travelRadiusKm: number;
+  // Phase 1 additions
+  serviceMode: "studio" | "client" | "both";
+  artistType: "solo" | "team";
+  maxBookingsPerDay: number;
+  cosmeticBrands: string;          // comma-sep, up to 5 in UI
+  outstationAvailable: boolean;
+  outstationConditions: string;
+  acneExperience: boolean;
+  acneExperienceDetails: string;
+  paymentStructure: string;
+  paymentModes: string;
+  invoiceAvailable: boolean;
+  paymentNotes: string;
+  // legacy bank/UPI columns (still on DB row, dropped from form)
   upiId: string; bankAccountName: string; bankIfsc: string; bankAccountNo: string;
   cancellationPolicy: string; agreedToTerms: boolean;
   skinToneExpertise: string;
@@ -912,9 +927,14 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
             <>
               <SectionHead title="Basic information" subtitle="How customers see you at a glance." />
               <FieldCard title="Identity" icon={Users}>
-                <ModalField label="Display name">
-                  <input value={form.displayName} onChange={(e) => setForm({...form, displayName: e.target.value})} className="dash-input" />
-                </ModalField>
+                <Grid>
+                  <ModalField label="Artist name">
+                    <input value={form.displayName} onChange={(e) => setForm({...form, displayName: e.target.value})} className="dash-input" />
+                  </ModalField>
+                  <ModalField label="Studio name">
+                    <input value={form.studioName} onChange={(e) => setForm({...form, studioName: e.target.value})} className="dash-input" placeholder="The studio / brand you work under" />
+                  </ModalField>
+                </Grid>
                 <ModalField label="Tagline">
                   <input value={form.tagline} onChange={(e) => setForm({...form, tagline: e.target.value})} className="dash-input" placeholder="One line that captures your style" />
                 </ModalField>
@@ -926,11 +946,22 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
                 </ModalField>
               </FieldCard>
 
-              <FieldCard title="Where you work" icon={MapPin}>
+              <FieldCard title="Where & how you work" icon={MapPin}>
                 <Grid>
                   <ModalField label="City"><input value={form.city} onChange={(e) => setForm({...form, city: e.target.value})} className="dash-input" /></ModalField>
                   <ModalField label="Area"><input value={form.area} onChange={(e) => setForm({...form, area: e.target.value})} className="dash-input" /></ModalField>
                 </Grid>
+                <ModalField label="Service mode">
+                  <RadioPills
+                    value={form.serviceMode}
+                    onChange={(v) => setForm({ ...form, serviceMode: v })}
+                    options={[
+                      { value: "studio", label: "At Studio" },
+                      { value: "client", label: "At Client's location" },
+                      { value: "both", label: "At Studio & Client's location" },
+                    ]}
+                  />
+                </ModalField>
               </FieldCard>
 
               <FieldCard title="Online presence" icon={Instagram}>
@@ -966,6 +997,18 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
           {section === "professional" && (
             <>
               <SectionHead title="Professional details" subtitle="Help clients trust your craft." />
+
+              <FieldCard title="Artist type" icon={Users}>
+                <RadioPills
+                  value={form.artistType}
+                  onChange={(v) => setForm({ ...form, artistType: v })}
+                  options={[
+                    { value: "solo", label: "Solo Artist" },
+                    { value: "team", label: "Artist with a team" },
+                  ]}
+                />
+              </FieldCard>
+
               <FieldCard title="Skills" icon={Sparkles}>
                 <Grid>
                   <ModalField label="Specialties (comma-sep.)">
@@ -977,18 +1020,6 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
                 </Grid>
               </FieldCard>
 
-              <FieldCard title="Experience" icon={Award}>
-                <ModalField label="Summary">
-                  <textarea rows={4} value={form.experienceSummary} onChange={(e) => setForm({...form, experienceSummary: e.target.value})} placeholder="Training, notable clients, awards…" className="dash-input resize-none" />
-                </ModalField>
-              </FieldCard>
-
-              <FieldCard title="Reach" icon={Compass}>
-                <ModalField label="Travel radius (km)">
-                  <input type="number" value={form.travelRadiusKm} onChange={(e) => setForm({...form, travelRadiusKm: Number(e.target.value)})} className="dash-input" min={0} />
-                </ModalField>
-              </FieldCard>
-
               <FieldCard title="Skin tone expertise" icon={Palette}>
                 <p className="text-xs text-ink-dim -mt-1">
                   Pick every tone you&apos;ve worked with — clients use this to find the right match.
@@ -998,26 +1029,130 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
                   onChange={(v) => setForm({ ...form, skinToneExpertise: v })}
                 />
               </FieldCard>
+
+              <FieldCard title="Experience" icon={Award}>
+                <ModalField label="Summary">
+                  <textarea rows={4} value={form.experienceSummary} onChange={(e) => setForm({...form, experienceSummary: e.target.value})} placeholder="Training, notable clients, awards…" className="dash-input resize-none" />
+                </ModalField>
+              </FieldCard>
+
+              <FieldCard title="Capacity & reach" icon={Compass}>
+                <Grid>
+                  <ModalField label="Maximum bookings per day">
+                    <input type="number" value={form.maxBookingsPerDay} onChange={(e) => setForm({...form, maxBookingsPerDay: Number(e.target.value)})} className="dash-input" min={1} max={20} />
+                  </ModalField>
+                  <ModalField label="Travel radius (km)">
+                    <input type="number" value={form.travelRadiusKm} onChange={(e) => setForm({...form, travelRadiusKm: Number(e.target.value)})} className="dash-input" min={0} />
+                  </ModalField>
+                </Grid>
+              </FieldCard>
+
+              <FieldCard title="Cosmetic brands used" icon={Sparkles}>
+                <p className="text-xs text-ink-dim -mt-1">Up to 5 brands you regularly work with — clients use this to gauge product compatibility.</p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {parseBrandSlots(form.cosmeticBrands).map((b, i) => (
+                    <input
+                      key={i}
+                      value={b}
+                      onChange={(e) => {
+                        const slots = parseBrandSlots(form.cosmeticBrands);
+                        slots[i] = e.target.value;
+                        setForm({ ...form, cosmeticBrands: slots.filter(Boolean).join(", ") });
+                      }}
+                      className="dash-input"
+                      placeholder={`Brand ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              </FieldCard>
+
+              <FieldCard title="Outstation booking" icon={Compass}>
+                <ToggleRow
+                  label="Available for outstation bookings?"
+                  value={form.outstationAvailable}
+                  onChange={(v) => setForm({ ...form, outstationAvailable: v })}
+                />
+                {form.outstationAvailable && (
+                  <ModalField label="Outstation conditions (3-5 points clients should know)">
+                    <textarea
+                      rows={6}
+                      value={form.outstationConditions}
+                      onChange={(e) => setForm({...form, outstationConditions: e.target.value})}
+                      placeholder={"e.g.\n• Minimum 2-day notice\n• Travel & lodging at client's expense\n• Day-rate ₹X for full-day shoots\n• Extra hands for travel-day commute\n• Final settlement before departure"}
+                      className="dash-input resize-none"
+                    />
+                  </ModalField>
+                )}
+              </FieldCard>
+
+              <FieldCard title="Skin sensitivities" icon={Award}>
+                <ToggleRow
+                  label="Experience working on acne / other skin conditions?"
+                  value={form.acneExperience}
+                  onChange={(v) => setForm({ ...form, acneExperience: v })}
+                />
+                {form.acneExperience && (
+                  <ModalField label="Details (optional — not mandatory to fill)">
+                    <textarea
+                      rows={4}
+                      value={form.acneExperienceDetails}
+                      onChange={(e) => setForm({...form, acneExperienceDetails: e.target.value})}
+                      placeholder="What conditions you've worked with and how you adapt — patch tests, hypo-allergenic product lines, etc."
+                      className="dash-input resize-none"
+                    />
+                  </ModalField>
+                )}
+              </FieldCard>
             </>
           )}
 
           {section === "payments" && (
             <>
-              <SectionHead title="Payments & settlement" subtitle="Where we send your earnings. Only visible to you." />
-              <FieldCard title="UPI" icon={Wallet}>
-                <ModalField label="UPI ID">
-                  <input value={form.upiId} onChange={(e) => setForm({...form, upiId: e.target.value})} placeholder="yourname@upi" className="dash-input" />
+              <SectionHead
+                title="Payments & settlement"
+                subtitle="Roop doesn't process payments — clients pay you directly. Share only what helps them plan."
+              />
+
+              <FieldCard title="Payment structure" icon={IndianRupee}>
+                <ModalField label="Advance : Final settlement ratio">
+                  <input
+                    value={form.paymentStructure}
+                    onChange={(e) => setForm({...form, paymentStructure: e.target.value})}
+                    className="dash-input"
+                    placeholder="e.g. 50:50 or 30% advance + 70% on the event day"
+                  />
                 </ModalField>
               </FieldCard>
 
-              <FieldCard title="Bank account" icon={Building2}>
-                <ModalField label="Account holder name">
-                  <input value={form.bankAccountName} onChange={(e) => setForm({...form, bankAccountName: e.target.value})} className="dash-input" />
+              <FieldCard title="Accepted modes of payment" icon={Wallet}>
+                <ModalField label="How clients can pay you">
+                  <input
+                    value={form.paymentModes}
+                    onChange={(e) => setForm({...form, paymentModes: e.target.value})}
+                    className="dash-input"
+                    placeholder="UPI, Cash, Bank transfer"
+                  />
                 </ModalField>
-                <Grid>
-                  <ModalField label="Account number"><input value={form.bankAccountNo} onChange={(e) => setForm({...form, bankAccountNo: e.target.value})} className="dash-input" /></ModalField>
-                  <ModalField label="IFSC"><input value={form.bankIfsc} onChange={(e) => setForm({...form, bankIfsc: e.target.value})} className="dash-input uppercase" /></ModalField>
-                </Grid>
+              </FieldCard>
+
+              <FieldCard title="Invoice availability" icon={FileSignature}>
+                <ToggleRow
+                  label="Do you provide an invoice or receipt?"
+                  value={form.invoiceAvailable}
+                  onChange={(v) => setForm({ ...form, invoiceAvailable: v })}
+                />
+              </FieldCard>
+
+              <FieldCard title="Additional notes" icon={MessageSquare}>
+                <ModalField label="Anything else clients should know about payments">
+                  <textarea
+                    rows={4}
+                    value={form.paymentNotes}
+                    onChange={(e) => setForm({...form, paymentNotes: e.target.value})}
+                    className="dash-input resize-none"
+                    placeholder="GST registration, refund timelines, security deposits, etc."
+                  />
+                </ModalField>
               </FieldCard>
             </>
           )}
@@ -1094,6 +1229,83 @@ function FieldCard({ title, icon: Icon, children }: {
       {children}
     </div>
   );
+}
+
+// Pill-style single-select used for "Service mode" and "Artist type".
+function RadioPills<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { value: T; label: string; hint?: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((opt) => {
+        const active = value === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            aria-pressed={active}
+            className={`px-4 py-2.5 rounded-full text-sm transition-all border ${
+              active
+                ? "border-gold bg-gradient-to-br from-gold/25 via-gold/5 to-transparent text-ink"
+                : "border-border bg-surface/40 text-ink-dim hover:border-gold/40 hover:text-ink"
+            }`}
+            title={opt.hint}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Yes/No toggle row — keyboard-accessible switch with a label on the left.
+function ToggleRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 p-4 border border-border rounded-2xl">
+      <span className="text-sm flex-1">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={value}
+        onClick={() => onChange(!value)}
+        className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${
+          value ? "bg-gradient-to-r from-gold to-amber" : "bg-surface-2"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform ${
+            value ? "translate-x-6" : ""
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+// Cosmetic brands stored as a comma-sep string; UI uses 5 slots.
+function parseBrandSlots(raw: string): string[] {
+  const arr = raw
+    .split(",")
+    .map((b) => b.trim())
+    .filter(Boolean);
+  while (arr.length < 5) arr.push("");
+  return arr.slice(0, 5);
 }
 
 // Multi-select chip toggle for skin tone expertise. Stored as comma-separated tags.

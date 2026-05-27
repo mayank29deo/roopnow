@@ -15,6 +15,7 @@ import type { AvailabilityInput } from "@/lib/availability";
 type Artist = {
   id: string;
   displayName: string;
+  studioName: string;
   tagline: string;
   bio: string;
   city: string;
@@ -23,6 +24,17 @@ type Artist = {
   coverUrl: string;
   specialties: string;
   skinToneExpertise: string;
+  cosmeticBrands: string;
+  outstationAvailable: boolean;
+  outstationConditions: string;
+  acneExperience: boolean;
+  acneExperienceDetails: string;
+  serviceMode: "studio" | "client" | "both";
+  artistType: "solo" | "team";
+  paymentStructure: string;
+  paymentModes: string;
+  invoiceAvailable: boolean;
+  paymentNotes: string;
   yearsExp: number;
   instagram: string | null;
   verified: boolean;
@@ -85,17 +97,22 @@ export function ArtistProfile({
             </div>
           </div>
 
-          <div className="relative -mt-20 lg:-mt-24 px-2 lg:px-8 grid lg:grid-cols-[auto_1fr_auto] gap-6 lg:gap-10 items-end">
+          {/* Avatar — sits half-overlapping the bottom-left of the banner.
+              Name + studio + meta now live BELOW the banner instead of
+              overlaying it (per client iteration #14). */}
+          <div className="relative -mt-16 lg:-mt-20 px-2 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-32 h-32 lg:w-44 lg:h-44 rounded-3xl overflow-hidden border-4 border-bg shadow-2xl"
+              className="w-28 h-28 lg:w-36 lg:h-36 rounded-3xl overflow-hidden border-4 border-bg shadow-2xl inline-block"
             >
               <img src={artist.avatarUrl} alt={artist.displayName} className="w-full h-full object-cover" />
             </motion.div>
+          </div>
 
-            <div className="lg:pb-4">
-              <div className="flex items-center gap-2 flex-wrap mb-2">
+          <div className="mt-6 lg:mt-8 px-2 lg:px-8 flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h1 className="font-display text-4xl lg:text-6xl leading-tight">{artist.displayName}</h1>
                 {artist.verified && (
                   <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs">
@@ -103,6 +120,11 @@ export function ArtistProfile({
                   </div>
                 )}
               </div>
+              {artist.studioName && (
+                <div className="text-[11px] uppercase tracking-[0.32em] text-gold mb-3">
+                  {artist.studioName}
+                </div>
+              )}
               <p className="text-ink-dim text-lg italic mb-4 max-w-2xl">{artist.tagline}</p>
               <div className="flex flex-wrap items-center gap-4 text-sm text-ink-dim">
                 <span className="flex items-center gap-1.5">
@@ -124,11 +146,23 @@ export function ArtistProfile({
                   </a>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2 mt-4">
-                {specialties.map((s) => (
-                  <span key={s} className="chip">{s}</span>
-                ))}
-              </div>
+
+              {/* Skills heading — matches the Skin Tone Expertise pattern
+                  per client item #13. */}
+              {specialties.length > 0 && (
+                <div className="mt-5">
+                  <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2 flex items-center gap-1.5">
+                    <span className="w-1 h-1 rounded-full bg-gold" />
+                    Skills
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {specialties.map((s) => (
+                      <span key={s} className="chip">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {skinTones.length > 0 && (
                 <div className="mt-4">
                   <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2 flex items-center gap-1.5">
@@ -144,7 +178,7 @@ export function ArtistProfile({
               )}
             </div>
 
-            <div className="lg:pb-4">
+            <div className="shrink-0">
               <button
                 onClick={() => setBooking(artist.services[0] ?? null)}
                 disabled={artist.services.length === 0}
