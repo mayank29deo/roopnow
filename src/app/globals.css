@@ -46,7 +46,7 @@
   --color-violet: var(--violet);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
-  --font-display: var(--font-fraunces);
+  --font-display: var(--font-playfair);
   --font-sans: var(--font-inter);
 }
 
@@ -93,9 +93,9 @@ body {
 
 @layer utilities {
   .font-display {
-    font-family: var(--font-fraunces), Georgia, serif;
+    font-family: var(--font-playfair), Georgia, serif;
     font-optical-sizing: auto;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
   }
 
   .text-gradient-primary {
