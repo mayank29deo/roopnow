@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { Upload, Link2, Loader2, Image as ImageIcon, X, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { CropModal } from "./CropModal";
 
 type Aspect = "square" | "wide" | "portrait";
 
@@ -9,6 +10,13 @@ const aspectClasses: Record<Aspect, string> = {
   square: "aspect-square",
   wide: "aspect-[16/9]",
   portrait: "aspect-[4/5]",
+};
+
+// Numeric aspect (width/height) the CropModal locks to.
+const aspectRatios: Record<Aspect, number> = {
+  square: 1,
+  wide: 16 / 9,
+  portrait: 4 / 5,
 };
 
 // Drag-drop / browse file picker that uploads to a public Supabase Storage bucket
@@ -38,8 +46,11 @@ export function ImagePicker({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState("");
+  // Picked file → object URL → CropModal → cropped Blob → uploaded.
+  // We hold the source URL here so the modal can render it.
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
-  async function uploadFile(file: File) {
+  function pickFile(file: File) {
     setError(null);
     if (!file.type.startsWith("image/")) {
       setError("Please pick an image (JPG, PNG, or WebP).");
@@ -49,17 +60,32 @@ export function ImagePicker({
       setError(`File too large — max ${maxMB} MB.`);
       return;
     }
+    // Hand off to the crop modal — the URL is revoked on confirm/cancel.
+    setCropSrc(URL.createObjectURL(file));
+  }
+
+  function closeCrop() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+  }
+
+  async function uploadBlob(blob: Blob) {
+    setError(null);
     setUploading(true);
     try {
       const supabase = createClient();
-      const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase();
-      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
       const { data, error: upErr } = await supabase.storage
         .from(bucket)
-        .upload(path, file, { cacheControl: "31536000", upsert: false });
+        .upload(path, blob, {
+          cacheControl: "31536000",
+          upsert: false,
+          contentType: "image/jpeg",
+        });
       if (upErr) throw upErr;
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
       onChange(urlData.publicUrl);
+      closeCrop();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Upload failed";
       if (/bucket not found/i.test(msg)) {
@@ -131,7 +157,7 @@ export function ImagePicker({
           onDrop={(e) => {
             e.preventDefault();
             const f = e.dataTransfer.files[0];
-            if (f) uploadFile(f);
+            if (f) pickFile(f);
           }}
           role="button"
           tabIndex={0}
@@ -164,7 +190,7 @@ export function ImagePicker({
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) uploadFile(f);
+              if (f) pickFile(f);
               e.target.value = "";
             }}
           />
@@ -196,6 +222,15 @@ export function ImagePicker({
 
       {helper && <p className="text-[11px] text-ink-dim italic">{helper}</p>}
       {error && <p className="text-xs text-rose">{error}</p>}
+
+      {cropSrc && (
+        <CropModal
+          src={cropSrc}
+          aspect={aspectRatios[aspect]}
+          onCancel={closeCrop}
+          onConfirm={uploadBlob}
+        />
+      )}
     </div>
   );
 }
