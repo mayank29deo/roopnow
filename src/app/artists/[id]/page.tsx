@@ -75,7 +75,12 @@ export default async function ArtistPage({
     await admin.rpc("increment_profile_view", { aid: id });
   } catch {}
 
-  const availability = buildAvailability(bookings, events, blocks);
+  const availability = buildAvailability(
+    bookings,
+    events,
+    blocks,
+    (rawArtist as { max_bookings_per_day?: number }).max_bookings_per_day ?? undefined,
+  );
 
   const artist = {
     ...toProfileArtist(rawArtist as Parameters<typeof toProfileArtist>[0]),

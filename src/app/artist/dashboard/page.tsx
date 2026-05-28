@@ -64,6 +64,7 @@ export default async function ArtistDashboard() {
     bookings.map((b) => ({ date: b.date, status: b.status })),
     events.map((e) => ({ event_date: e.event_date })),
     blocks.map((b) => ({ blocked_date: b.blocked_date })),
+    artistRow.max_bookings_per_day ?? undefined,
   );
 
   const plainArtist = {
