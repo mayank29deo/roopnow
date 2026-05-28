@@ -57,7 +57,16 @@ type Booking = {
   customerName: string; customerPhone: string | null; customerEmail: string | null;
   serviceName: string; serviceCategory: string; serviceDuration: number;
 };
-type Service = { id: string; name: string; description: string; duration: number; price: number; category: string };
+type Service = {
+  id: string; name: string;
+  description: string;            // legacy — UI now uses inclusions/exclusions
+  inclusions: string;
+  exclusions: string;
+  duration: number; price: number; category: string;
+};
+type AdditionalCharge = {
+  id: string; name: string; description: string; sortOrder: number;
+};
 type PortfolioItem = { id: string; imageUrl: string; caption: string | null; order: number };
 type BlockedDate = { id: string; blockedDate: string; reason: string | null };
 type ArtistEvent = {
@@ -73,10 +82,11 @@ type Subscription = {
 type Tab = "overview" | "requests" | "bookings" | "calendar" | "services" | "portfolio" | "profile" | "payments";
 
 export function ArtistDashboardClient({
-  artist, bookings, services, portfolio, blockedDates, events, subscriptions,
+  artist, bookings, services, additionalCharges, portfolio, blockedDates, events, subscriptions,
   availability, earnings, avgRating, reviewCount, userName, userId,
 }: {
-  artist: Artist; bookings: Booking[]; services: Service[]; portfolio: PortfolioItem[];
+  artist: Artist; bookings: Booking[]; services: Service[];
+  additionalCharges: AdditionalCharge[]; portfolio: PortfolioItem[];
   blockedDates: BlockedDate[]; events: ArtistEvent[]; subscriptions: Subscription[];
   availability: AvailabilityInput;
   earnings: number; avgRating: number; reviewCount: number;
@@ -151,7 +161,7 @@ export function ArtistDashboardClient({
               key="calendar" availability={availability} blockedDates={blockedDates} events={events}
             />
           )}
-          {tab === "services" && <ServicesTab key="services" services={services} artistId={artist.id} />}
+          {tab === "services" && <ServicesTab key="services" services={services} additionalCharges={additionalCharges} artistId={artist.id} />}
           {tab === "portfolio" && <PortfolioTab key="portfolio" portfolio={portfolio} artistId={artist.id} userId={userId} />}
           {tab === "profile" && <ProfileTab key="profile" artist={artist} userId={userId} />}
           {tab === "payments" && <PaymentsTab key="payments" subscriptions={subscriptions} artistId={artist.id} />}
@@ -647,67 +657,141 @@ function BlockDateModal({ onClose }: { onClose: () => void }) {
 // ============================================================
 // Services
 // ============================================================
-function ServicesTab({ services: initial, artistId }: { services: Service[]; artistId: string }) {
-  const router = useRouter();
-  const [services, setServices] = useState(initial);
-  const [editing, setEditing] = useState<Service | "new" | null>(null);
+type ServicesSubTab = "menu" | "charges";
 
-  async function remove(id: string) {
+function ServicesTab({
+  services: initialServices,
+  additionalCharges: initialCharges,
+  artistId,
+}: {
+  services: Service[];
+  additionalCharges: AdditionalCharge[];
+  artistId: string;
+}) {
+  const router = useRouter();
+  const [sub, setSub] = useState<ServicesSubTab>("menu");
+  const [services, setServices] = useState(initialServices);
+  const [charges, setCharges] = useState(initialCharges);
+  const [editingService, setEditingService] = useState<Service | "new" | null>(null);
+  const [editingCharge, setEditingCharge] = useState<AdditionalCharge | "new" | null>(null);
+
+  async function removeService(id: string) {
     if (!confirm("Remove this service?")) return;
     await fetch(`/api/services/${id}`, { method: "DELETE" });
     setServices((s) => s.filter((x) => x.id !== id));
     router.refresh();
   }
 
+  async function removeCharge(id: string) {
+    if (!confirm("Remove this additional charge?")) return;
+    await fetch(`/api/additional-charges/${id}`, { method: "DELETE" });
+    setCharges((c) => c.filter((x) => x.id !== id));
+    router.refresh();
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-      <div className="flex justify-between items-center mb-6">
-        <p className="text-ink-dim text-sm">Services appear on your public profile for clients to book.</p>
-        <button onClick={() => setEditing("new")} className="btn-primary">
-          <Plus size={16} /> Add service
-        </button>
+      {/* Sub-tab nav — Service Menu / Additional Charges */}
+      <div className="flex items-center gap-2 mb-6 p-1 rounded-2xl border border-border bg-surface/40 w-fit">
+        <SubTabButton active={sub === "menu"} onClick={() => setSub("menu")}>
+          <Sparkles size={14} /> Service Menu
+        </SubTabButton>
+        <SubTabButton active={sub === "charges"} onClick={() => setSub("charges")}>
+          <IndianRupee size={14} /> Additional Charges
+          {charges.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-gold/20 text-gold">{charges.length}</span>
+          )}
+        </SubTabButton>
       </div>
-      {services.length === 0 ? (
-        <div className="py-16 text-center border border-dashed border-border rounded-3xl">
-          <p className="font-display text-2xl mb-2">No services yet</p>
-          <button onClick={() => setEditing("new")} className="btn-primary mt-2"><Plus size={14} />Add your first service</button>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {services.map((s) => (
-            <div key={s.id} className="glass rounded-2xl p-6">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div>
-                  <div className="text-[10px] uppercase tracking-widest text-gold mb-1">{s.category}</div>
-                  <div className="font-semibold text-lg">{s.name}</div>
-                </div>
-                <div className="font-display text-xl text-gradient-rose">{formatPrice(s.price)}</div>
-              </div>
-              <p className="text-sm text-ink-dim leading-relaxed mb-4">{s.description}</p>
-              <div className="text-xs text-ink-dim flex items-center gap-3 mb-4">
-                <span className="flex items-center gap-1"><Clock size={11} className="text-gold" /> {s.duration} min</span>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setEditing(s)} className="btn-ghost text-xs py-2 px-3"><Edit3 size={12} />Edit</button>
-                <button onClick={() => remove(s.id)} className="btn-ghost text-xs py-2 px-3 text-rose hover:border-rose/50"><Trash2 size={12} />Remove</button>
-              </div>
+
+      {sub === "menu" && (
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <p className="text-ink-dim text-sm">Services appear on your public profile for clients to book.</p>
+            <button onClick={() => setEditingService("new")} className="btn-primary">
+              <Plus size={16} /> Add service
+            </button>
+          </div>
+          {services.length === 0 ? (
+            <div className="py-16 text-center border border-dashed border-border rounded-3xl">
+              <p className="font-display text-2xl mb-2">No services yet</p>
+              <button onClick={() => setEditingService("new")} className="btn-primary mt-2"><Plus size={14} />Add your first service</button>
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {services.map((s) => (
+                <ServiceCard
+                  key={s.id}
+                  service={s}
+                  onEdit={() => setEditingService(s)}
+                  onRemove={() => removeService(s.id)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {editing !== null && (
+      {sub === "charges" && (
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <p className="text-ink-dim text-sm">
+              Travel fees, early-morning, GST, special-occasion add-ons — anything that&rsquo;s priced separately from the menu.
+            </p>
+            <button onClick={() => setEditingCharge("new")} className="btn-primary">
+              <Plus size={16} /> Add charge
+            </button>
+          </div>
+          {charges.length === 0 ? (
+            <div className="py-16 text-center border border-dashed border-border rounded-3xl">
+              <p className="font-display text-2xl mb-2">No additional charges yet</p>
+              <p className="text-sm text-ink-dim mb-4">Helpful when an extra cost isn&rsquo;t baked into a service price.</p>
+              <button onClick={() => setEditingCharge("new")} className="btn-primary"><Plus size={14} />Add your first charge</button>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {charges.map((c) => (
+                <ChargeCard
+                  key={c.id}
+                  charge={c}
+                  onEdit={() => setEditingCharge(c)}
+                  onRemove={() => removeCharge(c.id)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {editingService !== null && (
         <ServiceEditor
-          initial={editing === "new" ? null : editing}
+          initial={editingService === "new" ? null : editingService}
           artistId={artistId}
-          onClose={() => setEditing(null)}
+          onClose={() => setEditingService(null)}
           onSaved={(s) => {
             setServices((list) => {
               const idx = list.findIndex((x) => x.id === s.id);
               if (idx >= 0) { const c = [...list]; c[idx] = s; return c; }
               return [...list, s];
             });
-            setEditing(null);
+            setEditingService(null);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {editingCharge !== null && (
+        <ChargeEditor
+          initial={editingCharge === "new" ? null : editingCharge}
+          artistId={artistId}
+          onClose={() => setEditingCharge(null)}
+          onSaved={(c) => {
+            setCharges((list) => {
+              const idx = list.findIndex((x) => x.id === c.id);
+              if (idx >= 0) { const arr = [...list]; arr[idx] = c; return arr; }
+              return [...list, c];
+            });
+            setEditingCharge(null);
             router.refresh();
           }}
         />
@@ -716,12 +800,87 @@ function ServicesTab({ services: initial, artistId }: { services: Service[]; art
   );
 }
 
+function SubTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all ${
+        active
+          ? "bg-gradient-to-br from-gold/20 to-gold/5 text-ink border border-gold/30"
+          : "text-ink-dim hover:text-ink border border-transparent"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ServiceCard({ service: s, onEdit, onRemove }: { service: Service; onEdit: () => void; onRemove: () => void }) {
+  const inclusions = s.inclusions.split("\n").map((x) => x.trim()).filter(Boolean);
+  const exclusions = s.exclusions.split("\n").map((x) => x.trim()).filter(Boolean);
+  return (
+    <div className="glass rounded-2xl p-6">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-gold mb-1">{s.category}</div>
+          <div className="font-semibold text-lg">{s.name}</div>
+        </div>
+        <div className="font-display text-xl text-gradient-rose">{formatPrice(s.price)}</div>
+      </div>
+      {(inclusions.length > 0 || exclusions.length > 0) ? (
+        <div className="space-y-1.5 mb-4">
+          {inclusions.map((it, i) => (
+            <div key={`+${i}`} className="flex items-start gap-2 text-sm">
+              <span className="text-emerald shrink-0 font-semibold leading-5">+</span>
+              <span className="text-ink-dim">{it}</span>
+            </div>
+          ))}
+          {exclusions.map((it, i) => (
+            <div key={`-${i}`} className="flex items-start gap-2 text-sm">
+              <span className="text-rose shrink-0 font-semibold leading-5">−</span>
+              <span className="text-ink-dim">{it}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        s.description && <p className="text-sm text-ink-dim leading-relaxed mb-4">{s.description}</p>
+      )}
+      <div className="text-xs text-ink-dim flex items-center gap-3 mb-4">
+        <span className="flex items-center gap-1"><Clock size={11} className="text-gold" /> {s.duration} min</span>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={onEdit} className="btn-ghost text-xs py-2 px-3"><Edit3 size={12} />Edit</button>
+        <button onClick={onRemove} className="btn-ghost text-xs py-2 px-3 text-rose hover:border-rose/50"><Trash2 size={12} />Remove</button>
+      </div>
+    </div>
+  );
+}
+
+function ChargeCard({ charge: c, onEdit, onRemove }: { charge: AdditionalCharge; onEdit: () => void; onRemove: () => void }) {
+  return (
+    <div className="glass rounded-2xl p-6">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="font-semibold text-lg flex-1">{c.name}</div>
+      </div>
+      {c.description && <p className="text-sm text-ink-dim leading-relaxed mb-4">{c.description}</p>}
+      <div className="flex gap-2">
+        <button onClick={onEdit} className="btn-ghost text-xs py-2 px-3"><Edit3 size={12} />Edit</button>
+        <button onClick={onRemove} className="btn-ghost text-xs py-2 px-3 text-rose hover:border-rose/50"><Trash2 size={12} />Remove</button>
+      </div>
+    </div>
+  );
+}
+
 function ServiceEditor({ initial, artistId, onClose, onSaved }: {
   initial: Service | null; artistId: string;
   onClose: () => void; onSaved: (s: Service) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [desc, setDesc] = useState(initial?.description ?? "");
+  // Migrate legacy single description into the inclusions box if a new
+  // record has none — so artists don't lose existing copy mid-rollout.
+  const seededInclusions = initial?.inclusions || (initial?.description && !initial.exclusions ? initial.description : "");
+  const [inclusions, setInclusions] = useState(seededInclusions ?? "");
+  const [exclusions, setExclusions] = useState(initial?.exclusions ?? "");
   const [duration, setDuration] = useState(initial?.duration ?? 60);
   const [price, setPrice] = useState(initial?.price ?? 5000);
   const [category, setCategory] = useState(initial?.category ?? "Bridal");
@@ -735,7 +894,16 @@ function ServiceEditor({ initial, artistId, onClose, onSaved }: {
       const res = await fetch(isEdit ? `/api/services/${initial!.id}` : "/api/services", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ artistId, name, description: desc, duration, price, category }),
+        body: JSON.stringify({
+          artistId,
+          name,
+          description: initial?.description ?? "", // preserved untouched on edit
+          inclusions,
+          exclusions,
+          duration,
+          price,
+          category,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
@@ -747,8 +915,44 @@ function ServiceEditor({ initial, artistId, onClose, onSaved }: {
   return <Modal title={isEdit ? "Edit service" : "New service"} onClose={onClose}>
     <div className="space-y-4">
       <ModalField label="Service name"><input value={name} onChange={(e) => setName(e.target.value)} className="dash-input" placeholder="e.g. Bridal Full Look" /></ModalField>
-      <ModalField label="Category"><select value={category} onChange={(e) => setCategory(e.target.value)} className="dash-input">{["Bridal","Party & Glam","Editorial","His Look","Just the Hair","Family Makeup"].map((c) => <option key={c}>{c}</option>)}</select></ModalField>
-      <ModalField label="Description"><textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} className="dash-input resize-none" /></ModalField>
+      <ModalField label="Category">
+        <select value={category} onChange={(e) => setCategory(e.target.value)} className="dash-input">
+          {["Bridal","Party & Glam","Editorial","His Look","Just the Hair","Family Makeup"].map((c) => <option key={c}>{c}</option>)}
+        </select>
+      </ModalField>
+
+      <div>
+        <label className="block">
+          <span className="text-xs uppercase tracking-widest text-emerald mb-2 flex items-center gap-1.5">
+            <span className="inline-block w-4 h-4 rounded-full bg-emerald/15 text-emerald text-center text-[11px] leading-4 font-semibold">+</span>
+            Inclusions
+          </span>
+          <textarea
+            value={inclusions}
+            onChange={(e) => setInclusions(e.target.value)}
+            rows={5}
+            className="dash-input resize-none"
+            placeholder={"One per line.\nFull-face HD makeup\nLashes + setting spray\n2 hours of touch-up"}
+          />
+        </label>
+      </div>
+
+      <div>
+        <label className="block">
+          <span className="text-xs uppercase tracking-widest text-rose mb-2 flex items-center gap-1.5">
+            <span className="inline-block w-4 h-4 rounded-full bg-rose/15 text-rose text-center text-[11px] leading-4 font-semibold">−</span>
+            Exclusions
+          </span>
+          <textarea
+            value={exclusions}
+            onChange={(e) => setExclusions(e.target.value)}
+            rows={4}
+            className="dash-input resize-none"
+            placeholder={"One per line.\nHair styling (book separately)\nTravel beyond 15km"}
+          />
+        </label>
+      </div>
+
       <Grid>
         <ModalField label="Duration (min)"><input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="dash-input" min={15} step={15} /></ModalField>
         <ModalField label="Price (₹)"><input type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))} className="dash-input" min={500} step={100} /></ModalField>
@@ -757,7 +961,57 @@ function ServiceEditor({ initial, artistId, onClose, onSaved }: {
     </div>
     <div className="mt-6 flex gap-3">
       <button onClick={onClose} className="btn-ghost flex-1">Cancel</button>
-      <button onClick={save} disabled={loading || !name || !desc} className="btn-primary flex-1 disabled:opacity-50">
+      <button onClick={save} disabled={loading || !name} className="btn-primary flex-1 disabled:opacity-50">
+        {loading ? <Loader2 className="animate-spin" size={16} /> : <><Check size={14} />{isEdit ? "Save" : "Create"}</>}
+      </button>
+    </div>
+  </Modal>;
+}
+
+function ChargeEditor({ initial, artistId, onClose, onSaved }: {
+  initial: AdditionalCharge | null; artistId: string;
+  onClose: () => void; onSaved: (c: AdditionalCharge) => void;
+}) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const isEdit = !!initial;
+
+  async function save() {
+    setLoading(true); setErr(null);
+    try {
+      const res = await fetch(isEdit ? `/api/additional-charges/${initial!.id}` : "/api/additional-charges", {
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artistId, name, description }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      onSaved(data.charge);
+    } catch (e) { setErr(e instanceof Error ? e.message : "Something went wrong"); }
+    finally { setLoading(false); }
+  }
+
+  return <Modal title={isEdit ? "Edit additional charge" : "New additional charge"} onClose={onClose}>
+    <div className="space-y-4">
+      <ModalField label="Charge name">
+        <input value={name} onChange={(e) => setName(e.target.value)} className="dash-input" placeholder="e.g. Travel beyond 15km" />
+      </ModalField>
+      <ModalField label="Description">
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          className="dash-input resize-none"
+          placeholder="What it covers, when it applies, how it's calculated."
+        />
+      </ModalField>
+      {err && <div className="text-sm text-rose bg-rose/10 border border-rose/30 rounded-xl px-4 py-3">{err}</div>}
+    </div>
+    <div className="mt-6 flex gap-3">
+      <button onClick={onClose} className="btn-ghost flex-1">Cancel</button>
+      <button onClick={save} disabled={loading || !name} className="btn-primary flex-1 disabled:opacity-50">
         {loading ? <Loader2 className="animate-spin" size={16} /> : <><Check size={14} />{isEdit ? "Save" : "Create"}</>}
       </button>
     </div>

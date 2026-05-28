@@ -22,7 +22,7 @@ export default async function ArtistDashboard() {
   const supabase = await createClient();
   const [
     artistRes, bookingsRes, servicesRes, portfolioRes, reviewsRes,
-    blocksRes, eventsRes, subsRes,
+    blocksRes, eventsRes, subsRes, chargesRes,
   ] = await Promise.all([
     supabase.from("artists").select("*").eq("id", user.artistId).maybeSingle(),
     supabase.from("bookings")
@@ -43,6 +43,7 @@ export default async function ArtistDashboard() {
       .eq("artist_id", user.artistId)
       .order("event_date", { ascending: false }),
     supabase.from("artist_subscriptions").select("*").eq("artist_id", user.artistId).order("period_month", { ascending: false }),
+    supabase.from("additional_charges").select("*").eq("artist_id", user.artistId).order("sort_order", { ascending: true }),
   ]);
 
   const artistRow = artistRes.data;
@@ -127,7 +128,12 @@ export default async function ArtistDashboard() {
       }))}
       services={(servicesRes.data ?? []).map((s) => ({
         id: s.id, name: s.name, description: s.description,
+        inclusions: s.inclusions ?? "", exclusions: s.exclusions ?? "",
         duration: s.duration, price: s.price, category: s.category,
+      }))}
+      additionalCharges={(chargesRes.data ?? []).map((c) => ({
+        id: c.id, name: c.name, description: c.description,
+        sortOrder: c.sort_order,
       }))}
       portfolio={(portfolioRes.data ?? []).map((p) => ({
         id: p.id, imageUrl: p.image_url, caption: p.caption, order: p.sort_order,

@@ -36,6 +36,8 @@ type RawArtistWithRelations = {
     id?: string;
     name?: string;
     description?: string;
+    inclusions?: string;
+    exclusions?: string;
     duration?: number;
   }[];
 };
@@ -102,6 +104,8 @@ export function toProfileArtist(a: RawArtistWithRelations) {
       id: s.id ?? "",
       name: s.name ?? "",
       description: s.description ?? "",
+      inclusions: s.inclusions ?? "",
+      exclusions: s.exclusions ?? "",
       duration: s.duration ?? 0,
       price: s.price,
       category: s.category ?? "",

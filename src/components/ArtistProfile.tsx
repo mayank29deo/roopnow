@@ -40,10 +40,14 @@ type Artist = {
   verified: boolean;
   portfolio: { id: string; imageUrl: string; caption: string | null }[];
   services: {
-    id: string; name: string; description: string;
+    id: string; name: string;
+    description: string;
+    inclusions: string;
+    exclusions: string;
     duration: number; price: number; category: string;
   }[];
   reviews: { id: string; rating: number; comment: string; userName: string; createdAt: string }[];
+  additionalCharges: { id: string; name: string; description: string; sortOrder: number }[];
 };
 
 export function ArtistProfile({
@@ -227,31 +231,82 @@ export function ArtistProfile({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="grid md:grid-cols-2 gap-4"
               >
-                {artist.services.map((s) => (
-                  <div key={s.id} className="glass rounded-2xl p-6 hover:border-gold/40 transition-colors">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <div className="text-xs text-gold uppercase tracking-wider mb-1">{s.category}</div>
-                        <h3 className="font-display text-2xl">{s.name}</h3>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <div className="font-display text-2xl text-gradient-rose">{formatPrice(s.price)}</div>
-                        <div className="text-xs text-ink-dim flex items-center gap-1 justify-end">
-                          <Clock size={10} /> {s.duration} min
+                <div className="grid md:grid-cols-2 gap-4">
+                  {artist.services.map((s) => {
+                    const inclusions = s.inclusions.split("\n").map((x) => x.trim()).filter(Boolean);
+                    const exclusions = s.exclusions.split("\n").map((x) => x.trim()).filter(Boolean);
+                    const hasStructured = inclusions.length > 0 || exclusions.length > 0;
+                    return (
+                      <div key={s.id} className="glass rounded-2xl p-6 hover:border-gold/40 transition-colors">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="text-xs text-gold uppercase tracking-wider mb-1">{s.category}</div>
+                            <h3 className="font-display text-2xl">{s.name}</h3>
+                          </div>
+                          <div className="text-right shrink-0 ml-4">
+                            <div className="font-display text-2xl text-gradient-rose">{formatPrice(s.price)}</div>
+                            <div className="text-xs text-ink-dim flex items-center gap-1 justify-end">
+                              <Clock size={10} /> {s.duration} min
+                            </div>
+                          </div>
                         </div>
+                        {hasStructured ? (
+                          <div className="space-y-1.5 mb-5">
+                            {inclusions.map((it, i) => (
+                              <div key={`+${i}`} className="flex items-start gap-2 text-sm">
+                                <span className="text-emerald shrink-0 font-semibold leading-5">+</span>
+                                <span className="text-ink-dim">{it}</span>
+                              </div>
+                            ))}
+                            {exclusions.map((it, i) => (
+                              <div key={`-${i}`} className="flex items-start gap-2 text-sm">
+                                <span className="text-rose shrink-0 font-semibold leading-5">−</span>
+                                <span className="text-ink-dim">{it}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          s.description && (
+                            <p className="text-ink-dim text-sm leading-relaxed mb-5">{s.description}</p>
+                          )
+                        )}
+                        <button
+                          onClick={() => setBooking(s)}
+                          className="btn-ghost w-full hover:bg-gold/5 hover:border-gold/50"
+                        >
+                          Book this service
+                        </button>
                       </div>
+                    );
+                  })}
+                </div>
+
+                {/* Additional Charges — extras priced separately from the service menu */}
+                {artist.additionalCharges.length > 0 && (
+                  <div className="mt-12">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="text-[10px] uppercase tracking-[0.32em] text-gold flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-gold" />
+                        Additional charges
+                      </div>
+                      <div className="flex-1 h-px bg-border" />
                     </div>
-                    <p className="text-ink-dim text-sm leading-relaxed mb-5">{s.description}</p>
-                    <button
-                      onClick={() => setBooking(s)}
-                      className="btn-ghost w-full hover:bg-gold/5 hover:border-gold/50"
-                    >
-                      Book this service
-                    </button>
+                    <p className="text-ink-dim text-sm mb-6">
+                      These are priced separately from the menu above. The Artist will confirm what applies before your booking.
+                    </p>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {artist.additionalCharges.map((c) => (
+                        <div key={c.id} className="rounded-2xl border border-border bg-surface/30 p-4">
+                          <div className="font-semibold text-sm mb-1">{c.name}</div>
+                          {c.description && (
+                            <div className="text-xs text-ink-dim leading-relaxed">{c.description}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </motion.div>
             )}
 

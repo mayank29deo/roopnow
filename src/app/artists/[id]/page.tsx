@@ -23,13 +23,14 @@ export default async function ArtistPage({
   let bookings: { date: string; status: string }[] = [];
   let events: { event_date: string }[] = [];
   let blocks: { blocked_date: string }[] = [];
+  let additionalCharges: { id: string; name: string; description: string; sort_order: number }[] = [];
 
   try {
     const supabase = await createClient();
-    const [artistRes, reviewsRes, bookingsRes, eventsRes, blocksRes] = await Promise.all([
+    const [artistRes, reviewsRes, bookingsRes, eventsRes, blocksRes, chargesRes] = await Promise.all([
       supabase
         .from("artists")
-        .select("*, portfolio_items(id, image_url, caption, sort_order), services(id, name, description, duration, price, category)")
+        .select("*, portfolio_items(id, image_url, caption, sort_order), services(id, name, description, inclusions, exclusions, duration, price, category)")
         .eq("id", id)
         .maybeSingle(),
       supabase
@@ -49,12 +50,18 @@ export default async function ArtistPage({
         .from("artist_blocked_dates")
         .select("blocked_date")
         .eq("artist_id", id),
+      supabase
+        .from("additional_charges")
+        .select("id, name, description, sort_order")
+        .eq("artist_id", id)
+        .order("sort_order", { ascending: true }),
     ]);
     rawArtist = artistRes.data;
     rawReviews = (reviewsRes.data ?? []) as unknown as typeof rawReviews;
     bookings = bookingsRes.data ?? [];
     events = eventsRes.data ?? [];
     blocks = blocksRes.data ?? [];
+    additionalCharges = chargesRes.data ?? [];
   } catch (err) {
     console.error("DB unavailable on artist profile:", err);
   }
@@ -78,6 +85,12 @@ export default async function ArtistPage({
       comment: r.comment,
       userName: r.profiles?.name ?? "Anonymous",
       createdAt: r.created_at,
+    })),
+    additionalCharges: additionalCharges.map((c) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      sortOrder: c.sort_order,
     })),
   };
 

@@ -13,7 +13,10 @@ import { AvailabilityCalendar } from "./AvailabilityCalendar";
 import type { AvailabilityInput } from "@/lib/availability";
 
 type Service = {
-  id: string; name: string; description: string;
+  id: string; name: string;
+  description: string;
+  inclusions: string;
+  exclusions: string;
   duration: number; price: number; category: string;
 };
 type Artist = {

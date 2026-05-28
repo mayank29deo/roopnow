@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, getSessionUser } from "@/lib/supabase/server";
 import { z } from "zod";
 
+// Phase 4: `description` is optional now — the UI writes structured
+// `inclusions` (green +) and `exclusions` (red −) bullet lists instead.
+// description is still accepted for backward compat / older callers.
 const schema = z.object({
   artistId: z.string(),
   name: z.string().min(2),
-  description: z.string().min(5),
+  description: z.string().optional().default(""),
+  inclusions: z.string().optional().default(""),
+  exclusions: z.string().optional().default(""),
   duration: z.number().int().min(15),
   price: z.number().int().min(100),
   category: z.string(),
@@ -26,6 +31,8 @@ export async function POST(req: NextRequest) {
         artist_id: data.artistId,
         name: data.name,
         description: data.description,
+        inclusions: data.inclusions,
+        exclusions: data.exclusions,
         duration: data.duration,
         price: data.price,
         category: data.category,
