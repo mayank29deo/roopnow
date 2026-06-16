@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,7 +27,7 @@ type Artist = {
 const slots = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
 
 export function BookingDrawer({
-  artist, user, service, availability, onClose, onChangeService,
+  artist, user, service, availability, onClose, onChangeService, initialDate,
 }: {
   artist: Artist;
   user: { id: string; name: string; role: string } | null;
@@ -35,11 +35,29 @@ export function BookingDrawer({
   availability: AvailabilityInput;
   onClose: () => void;
   onChangeService: (s: Service) => void;
+  // When provided, the drawer opens with this date already picked so
+  // step 2 only needs a time-slot tap. Used when the customer clicks
+  // a date on the public profile's Availability tab.
+  initialDate?: Date | null;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [date, setDate] = useState<Date | null>(null);
+  const [date, setDate] = useState<Date | null>(initialDate ?? null);
   const [slot, setSlot] = useState<string | null>(null);
+  // Ref on the slot-picker block so we can scroll it into view the
+  // moment a date is picked — drawer content is taller than most
+  // viewports, the picker rendered below the calendar would otherwise
+  // sit off-screen and feel like "nothing happened".
+  const slotPickerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll the slot picker into view whenever it becomes
+  // available — either because the user just picked a date, or
+  // because step 2 just rendered with a pre-filled initialDate.
+  useEffect(() => {
+    if (step === 2 && date && slotPickerRef.current) {
+      slotPickerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [date, step]);
   const [eventName, setEventName] = useState("");
   const [budget, setBudget] = useState("");
   const [address, setAddress] = useState("");
@@ -208,7 +226,12 @@ export function BookingDrawer({
                   </div>
 
                   {date && (
-                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                    <motion.div
+                      ref={slotPickerRef}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="scroll-mt-4"
+                    >
                       <div className="text-xs uppercase tracking-widest text-ink-dim mb-3 flex items-center gap-1.5">
                         <Clock size={12} className="text-gold" /> Time slot · {format(date, "EEE, d MMM")}
                       </div>

@@ -62,6 +62,16 @@ export function ArtistProfile({
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [tab, setTab] = useState<"services" | "portfolio" | "availability" | "reviews" | "about">("services");
   const [booking, setBooking] = useState<Artist["services"][0] | null>(null);
+  // When a customer clicks a date on the Availability tab, we open the
+  // booking drawer with that date pre-picked so step 2 only needs a
+  // time-slot tap. Cleared on drawer close.
+  const [bookingInitialDate, setBookingInitialDate] = useState<Date | null>(null);
+
+  function startBookingForDate(d: Date) {
+    if (artist.services.length === 0) return;
+    setBookingInitialDate(d);
+    setBooking(artist.services[0]);
+  }
 
   const rating =
     artist.reviews.length > 0
@@ -341,10 +351,13 @@ export function ArtistProfile({
               >
                 <h3 className="font-display text-3xl mb-2">When {artist.displayName.split(" ")[0]} is available</h3>
                 <p className="text-ink-dim text-sm mb-6">
-                  Green days are wide open. Yellow means a slot is already taken. Red is off-limits — blocked or fully booked.
+                  Tap any green or yellow date to start a booking request. Red days are blocked or fully booked.
                 </p>
                 <div className="glass rounded-3xl p-6">
-                  <AvailabilityCalendar availability={availability} />
+                  <AvailabilityCalendar
+                    availability={availability}
+                    onPick={artist.services.length > 0 ? startBookingForDate : undefined}
+                  />
                 </div>
                 <button
                   onClick={() => setBooking(artist.services[0] ?? null)}
@@ -433,7 +446,8 @@ export function ArtistProfile({
         user={user}
         service={booking}
         availability={availability}
-        onClose={() => setBooking(null)}
+        initialDate={bookingInitialDate}
+        onClose={() => { setBooking(null); setBookingInitialDate(null); }}
         onChangeService={(s) => setBooking(s)}
       />
     </>
