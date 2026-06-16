@@ -6,6 +6,7 @@ import { FeaturedArtists } from "@/components/landing/FeaturedArtists";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { ArtistCTA } from "@/components/landing/ArtistCTA";
 import { FinalCTA } from "@/components/landing/FinalCTA";
+import { DisclaimerScroller } from "@/components/landing/DisclaimerScroller";
 import { LandingIntro } from "@/components/LandingIntro";
 import { toCardArtist } from "@/lib/supabase/shape";
 
@@ -38,6 +39,7 @@ export default async function Home() {
       {featured.length > 0 && <FeaturedArtists artists={featured} />}
       <HowItWorks />
       <ServiceCategories />
+      <DisclaimerScroller />
       <FinalCTA />
     </>
   );

@@ -72,7 +72,13 @@ export function ArtistCard({ artist }: { artist: Artist }) {
       : "New";
   const fromPrice = artist.services[0]?.price;
   const specialties = artist.specialties.split(",").slice(0, 2);
-  const portfolioImg = artist.portfolio[0]?.imageUrl ?? artist.coverUrl;
+  // Card hero: prefer a portfolio image (portrait-ish, fits the
+  // 5:6 card cleanly). Fall back to the cover banner, but bias the
+  // crop toward the top so wide 16:9 banners don't lose their focal
+  // point to a centered crop.
+  const portfolio0 = artist.portfolio[0]?.imageUrl;
+  const portfolioImg = portfolio0 ?? artist.coverUrl;
+  const usingFallbackCover = !portfolio0;
 
   return (
     <Link
@@ -84,6 +90,7 @@ export function ArtistCard({ artist }: { artist: Artist }) {
           src={portfolioImg}
           alt={artist.displayName}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          style={usingFallbackCover ? { objectPosition: "center 30%" } : undefined}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/10 to-transparent" />
 

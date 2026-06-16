@@ -1225,7 +1225,7 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
               </FieldCard>
 
               <FieldCard title="Brand visuals" icon={ImageIcon}>
-                <p className="text-xs text-ink-dim -mt-1 mb-1">Avatar shows on cards across the platform. Cover is the banner on your public profile.</p>
+                <p className="text-xs text-ink-dim -mt-1 mb-1">Avatar shows on cards across the platform. Cover is the wide banner on your public profile — on Discover, your card hero comes from your <strong>portfolio</strong> photos. Add at least one portfolio image so your card stands out.</p>
                 <div className="grid md:grid-cols-2 gap-5">
                   <ImagePicker
                     bucket="avatars"
