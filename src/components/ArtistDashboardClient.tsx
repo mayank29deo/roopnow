@@ -955,7 +955,24 @@ function ServiceEditor({ initial, artistId, onClose, onSaved }: {
 
       <Grid>
         <ModalField label="Duration (min)"><input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="dash-input" min={15} step={15} /></ModalField>
-        <ModalField label="Price (₹)"><input type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))} className="dash-input" min={500} step={100} /></ModalField>
+        <ModalField label="Price (₹)">
+          <input
+            // type=text + inputMode=numeric so iOS shows a numeric
+            // keyboard while letting us format with Indian-style
+            // commas and accept backspace cleanly. type=number on
+            // mobile was eating commas + the seeded "5000" couldn't
+            // be cleared by a single backspace.
+            type="text"
+            inputMode="numeric"
+            value={price > 0 ? price.toLocaleString("en-IN") : ""}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/[^0-9]/g, "");
+              setPrice(raw === "" ? 0 : parseInt(raw, 10));
+            }}
+            className="dash-input"
+            placeholder="5,000"
+          />
+        </ModalField>
       </Grid>
       {err && <div className="text-sm text-rose bg-rose/10 border border-rose/30 rounded-xl px-4 py-3">{err}</div>}
     </div>
@@ -1137,6 +1154,24 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Local slot state for the 5 Cosmetic Brands inputs. We track each
+  // box independently so the artist can leave empty boxes between
+  // filled ones, type spaces freely, and not have focus jump to a
+  // different slot mid-edit. form.cosmeticBrands stays in sync as the
+  // trimmed comma-joined string that the API expects.
+  const [brandSlots, setBrandSlots] = useState<string[]>(() =>
+    seedBrandSlots(artist.cosmeticBrands),
+  );
+  function setBrandAt(i: number, value: string) {
+    setBrandSlots((prev) => {
+      const next = [...prev];
+      next[i] = value;
+      const joined = next.map((b) => b.trim()).filter(Boolean).join(", ");
+      setForm((f) => ({ ...f, cosmeticBrands: joined }));
+      return next;
+    });
+  }
+
   async function save() {
     setLoading(true);
     await fetch("/api/artist", {
@@ -1225,7 +1260,7 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
               </FieldCard>
 
               <FieldCard title="Brand visuals" icon={ImageIcon}>
-                <p className="text-xs text-ink-dim -mt-1 mb-1">Avatar shows on cards across the platform. Cover is the wide banner on your public profile — on Discover, your card hero comes from your <strong>portfolio</strong> photos. Add at least one portfolio image so your card stands out.</p>
+                <p className="text-xs text-ink-dim -mt-1 mb-1">Avatar shows on cards across the platform. <strong>Cover</strong> is your hero shot — this is exactly what shows up on the Discover card and the top of your public profile, so what you crop here is what visitors see.</p>
                 <div className="grid md:grid-cols-2 gap-5">
                   <ImagePicker
                     bucket="avatars"
@@ -1240,7 +1275,13 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
                     folder={userId}
                     value={form.coverUrl}
                     onChange={(url) => setForm({...form, coverUrl: url ?? ""})}
-                    aspect="wide"
+                    // Sheet 12-Jun #8: previously "wide" (16:9) which
+                    // mismatched the homepage Discover card (5:6
+                    // portrait). Now "portrait" so the upload aspect
+                    // matches what visitors see on the card; the
+                    // profile-page banner still centres it in the wide
+                    // hero via object-cover.
+                    aspect="portrait"
                     label="Cover image"
                   />
                 </div>
@@ -1304,15 +1345,11 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
               <FieldCard title="Cosmetic brands used" icon={Sparkles}>
                 <p className="text-xs text-ink-dim -mt-1">Up to 5 brands you regularly work with — clients use this to gauge product compatibility.</p>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {parseBrandSlots(form.cosmeticBrands).map((b, i) => (
+                  {brandSlots.map((b, i) => (
                     <input
                       key={i}
                       value={b}
-                      onChange={(e) => {
-                        const slots = parseBrandSlots(form.cosmeticBrands);
-                        slots[i] = e.target.value;
-                        setForm({ ...form, cosmeticBrands: slots.filter(Boolean).join(", ") });
-                      }}
+                      onChange={(e) => setBrandAt(i, e.target.value)}
                       className="dash-input"
                       placeholder={`Brand ${i + 1}`}
                     />
@@ -1552,8 +1589,11 @@ function ToggleRow({
   );
 }
 
-// Cosmetic brands stored as a comma-sep string; UI uses 5 slots.
-function parseBrandSlots(raw: string): string[] {
+// Seed the 5 cosmetic-brand input slots from the saved comma-sep
+// string. Used once on mount — after that, slot state is owned by the
+// ProfileTab so empty boxes between filled ones stay where the artist
+// left them and typing spaces doesn't trim mid-keystroke.
+function seedBrandSlots(raw: string): string[] {
   const arr = raw
     .split(",")
     .map((b) => b.trim())

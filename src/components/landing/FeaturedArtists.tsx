@@ -71,7 +71,6 @@ export function ArtistCard({ artist }: { artist: Artist }) {
         ).toFixed(1)
       : "New";
   const fromPrice = artist.services[0]?.price;
-  const specialties = artist.specialties.split(",").slice(0, 2);
   // Card hero: prefer a portfolio image (portrait-ish, fits the
   // 5:6 card cleanly). Fall back to the cover banner, but bias the
   // crop toward the top so wide 16:9 banners don't lose their focal
@@ -94,18 +93,14 @@ export function ArtistCard({ artist }: { artist: Artist }) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/10 to-transparent" />
 
-        <div className="absolute top-4 left-4 right-4 flex items-start justify-between">
-          <div className="flex flex-wrap gap-1.5">
-            {specialties.map((s) => (
-              <span key={s} className="chip bg-bg/50 backdrop-blur-md text-[11px]">{s.trim()}</span>
-            ))}
+        {/* Sheet 11: specialty chip overlays removed per client.
+            Verified badge stays on its own — keeps the trust marker
+            without cluttering the hero image. */}
+        {artist.verified && (
+          <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-bg/50 backdrop-blur-md flex items-center justify-center">
+            <BadgeCheck size={16} className="text-gold fill-gold/20" />
           </div>
-          {artist.verified && (
-            <div className="w-8 h-8 rounded-full bg-bg/50 backdrop-blur-md flex items-center justify-center">
-              <BadgeCheck size={16} className="text-gold fill-gold/20" />
-            </div>
-          )}
-        </div>
+        )}
 
         <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
           <div className="flex items-center gap-3">

@@ -410,6 +410,14 @@ export function ArtistProfile({
               >
                 <h3 className="font-display text-3xl mb-4">About {artist.displayName.split(" ")[0]}</h3>
                 <p className="text-ink-dim leading-loose text-lg whitespace-pre-wrap">{artist.bio}</p>
+
+                {/* Professional details surfaced from the dashboard
+                    so the customer can scan how the artist actually
+                    works before they book (item #3 of the 12-Jun
+                    tracker). Conditional blocks only render when the
+                    artist has filled in the relevant field. */}
+                <div className="border-t border-border my-12" />
+                <ProfessionalDetailsBlock artist={artist} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -451,5 +459,133 @@ export function ArtistProfile({
         onChangeService={(s) => setBooking(s)}
       />
     </>
+  );
+}
+
+// Renders all the Phase 3 professional-detail fields on the public
+// profile. Each block only appears if the artist has filled it in,
+// so the section stays clean for new artists who haven't completed
+// the form yet.
+function ProfessionalDetailsBlock({ artist }: { artist: Artist }) {
+  const brands = artist.cosmeticBrands.split(",").map((b) => b.trim()).filter(Boolean);
+  const outstationPoints = artist.outstationConditions
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const artistTypeLabel = artist.artistType === "team" ? "Artist with a team" : "Solo Artist";
+  const serviceModeLabel =
+    artist.serviceMode === "client"
+      ? "At client's location"
+      : artist.serviceMode === "both"
+        ? "At studio or client's location"
+        : "At studio";
+
+  // Hide the whole block if nothing meaningful is set (no enums beyond
+  // defaults, no payment info, no outstation, no brands, no acne).
+  const hasAnythingMeaningful =
+    brands.length > 0 ||
+    artist.outstationAvailable ||
+    artist.acneExperience ||
+    !!artist.paymentStructure ||
+    !!artist.paymentModes ||
+    !!artist.paymentNotes ||
+    artist.invoiceAvailable;
+  // We still want to show artistType + serviceMode even if everything
+  // else is blank — those are useful defaults.
+
+  return (
+    <>
+      <h3 className="font-display text-3xl mb-6">Professional details</h3>
+
+      <div className="grid sm:grid-cols-2 gap-x-10 gap-y-6">
+        <DetailRow label="Artist type" value={artistTypeLabel} />
+        <DetailRow label="Service mode" value={serviceModeLabel} />
+      </div>
+
+      {brands.length > 0 && (
+        <div className="mt-10">
+          <DetailLabel>Cosmetic brands used</DetailLabel>
+          <div className="flex flex-wrap gap-2">
+            {brands.map((b) => (
+              <span key={b} className="chip">{b}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {artist.outstationAvailable && (
+        <div className="mt-10">
+          <DetailLabel>Outstation booking</DetailLabel>
+          <p className="text-ink-dim text-sm mb-3">Available for travel beyond home city.</p>
+          {outstationPoints.length > 0 && (
+            <ul className="space-y-1.5 text-sm text-ink-dim">
+              {outstationPoints.map((p, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="text-gold leading-5">•</span>
+                  <span>{p}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {artist.acneExperience && (
+        <div className="mt-10">
+          <DetailLabel>Skin sensitivities</DetailLabel>
+          <p className="text-ink-dim text-sm">
+            Experience working with acne and other skin conditions.
+          </p>
+          {artist.acneExperienceDetails && (
+            <p className="text-ink-dim text-sm mt-2 whitespace-pre-wrap">
+              {artist.acneExperienceDetails}
+            </p>
+          )}
+        </div>
+      )}
+
+      {hasAnythingMeaningful && (artist.paymentStructure || artist.paymentModes || artist.invoiceAvailable || artist.paymentNotes) && (
+        <div className="mt-12">
+          <h4 className="font-display text-2xl mb-4">Payments &amp; settlement</h4>
+          <div className="grid sm:grid-cols-2 gap-x-10 gap-y-6">
+            {artist.paymentStructure && (
+              <DetailRow label="Payment structure" value={artist.paymentStructure} />
+            )}
+            {artist.paymentModes && (
+              <DetailRow label="Accepted modes" value={artist.paymentModes} />
+            )}
+            <DetailRow
+              label="Invoice"
+              value={artist.invoiceAvailable ? "Provided on request" : "Not provided"}
+            />
+          </div>
+          {artist.paymentNotes && (
+            <div className="mt-6">
+              <DetailLabel>Additional notes</DetailLabel>
+              <p className="text-ink-dim text-sm whitespace-pre-wrap">{artist.paymentNotes}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <DetailLabel>{label}</DetailLabel>
+      <div className="text-ink">{value}</div>
+    </div>
+  );
+}
+
+function DetailLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2 flex items-center gap-1.5">
+      <span className="w-1 h-1 rounded-full bg-gold" />
+      {children}
+    </div>
   );
 }
