@@ -248,39 +248,49 @@ export function ArtistProfile({
                     const exclusions = s.exclusions.split("\n").map((x) => x.trim()).filter(Boolean);
                     const hasStructured = inclusions.length > 0 || exclusions.length > 0;
                     return (
-                      <div key={s.id} className="glass rounded-2xl p-6 hover:border-gold/40 transition-colors">
+                      // flex-col on the card + flex-grow on the
+                      // content block pushes the "Book this service"
+                      // button to the bottom of every card. Combined
+                      // with the grid's auto-stretch, all CTAs land
+                      // on the same horizontal line even when one
+                      // service has more inclusions/exclusions than
+                      // another. items-stretch on the grid is the
+                      // default; nothing extra needed there.
+                      <div key={s.id} className="glass rounded-2xl p-6 hover:border-gold/40 transition-colors flex flex-col">
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <div className="text-xs text-gold uppercase tracking-wider mb-1">{s.category}</div>
                             <h3 className="font-display text-2xl">{s.name}</h3>
                           </div>
                           <div className="text-right shrink-0 ml-4">
-                            <div className="font-display text-2xl text-gradient-rose">{formatPrice(s.price)}</div>
-                            <div className="text-xs text-ink-dim flex items-center gap-1 justify-end">
+                            <div className="font-display text-2xl text-gradient-rose leading-none">{formatPrice(s.price)}</div>
+                            <div className="text-xs text-ink-dim flex items-center gap-1 justify-end mt-2">
                               <Clock size={10} /> {s.duration} min
                             </div>
                           </div>
                         </div>
-                        {hasStructured ? (
-                          <div className="space-y-1.5 mb-5">
-                            {inclusions.map((it, i) => (
-                              <div key={`+${i}`} className="flex items-start gap-2 text-sm">
-                                <span className="text-emerald shrink-0 font-semibold leading-5">+</span>
-                                <span className="text-ink-dim">{it}</span>
-                              </div>
-                            ))}
-                            {exclusions.map((it, i) => (
-                              <div key={`-${i}`} className="flex items-start gap-2 text-sm">
-                                <span className="text-rose shrink-0 font-semibold leading-5">−</span>
-                                <span className="text-ink-dim">{it}</span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          s.description && (
-                            <p className="text-ink-dim text-sm leading-relaxed mb-5">{s.description}</p>
-                          )
-                        )}
+                        <div className="flex-grow mb-5">
+                          {hasStructured ? (
+                            <div className="space-y-1.5">
+                              {inclusions.map((it, i) => (
+                                <div key={`+${i}`} className="flex items-start gap-2 text-sm">
+                                  <span className="text-emerald shrink-0 font-semibold leading-5">+</span>
+                                  <span className="text-ink-dim">{it}</span>
+                                </div>
+                              ))}
+                              {exclusions.map((it, i) => (
+                                <div key={`-${i}`} className="flex items-start gap-2 text-sm">
+                                  <span className="text-rose shrink-0 font-semibold leading-5">−</span>
+                                  <span className="text-ink-dim">{it}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            s.description && (
+                              <p className="text-ink-dim text-sm leading-relaxed">{s.description}</p>
+                            )
+                          )}
+                        </div>
                         <button
                           onClick={() => setBooking(s)}
                           className="btn-ghost w-full hover:bg-gold/5 hover:border-gold/50"

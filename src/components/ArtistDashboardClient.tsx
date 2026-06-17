@@ -819,32 +819,38 @@ function ServiceCard({ service: s, onEdit, onRemove }: { service: Service; onEdi
   const inclusions = s.inclusions.split("\n").map((x) => x.trim()).filter(Boolean);
   const exclusions = s.exclusions.split("\n").map((x) => x.trim()).filter(Boolean);
   return (
-    <div className="glass rounded-2xl p-6">
+    // flex-col + flex-grow on the inclusion/exclusion block so the
+    // duration + Edit/Remove row anchors to the bottom of every card,
+    // keeping the grid row visually aligned regardless of how many
+    // bullets each service has.
+    <div className="glass rounded-2xl p-6 flex flex-col">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <div className="text-[10px] uppercase tracking-widest text-gold mb-1">{s.category}</div>
           <div className="font-semibold text-lg">{s.name}</div>
         </div>
-        <div className="font-display text-xl text-gradient-rose">{formatPrice(s.price)}</div>
+        <div className="font-display text-xl text-gradient-rose leading-none">{formatPrice(s.price)}</div>
       </div>
-      {(inclusions.length > 0 || exclusions.length > 0) ? (
-        <div className="space-y-1.5 mb-4">
-          {inclusions.map((it, i) => (
-            <div key={`+${i}`} className="flex items-start gap-2 text-sm">
-              <span className="text-emerald shrink-0 font-semibold leading-5">+</span>
-              <span className="text-ink-dim">{it}</span>
-            </div>
-          ))}
-          {exclusions.map((it, i) => (
-            <div key={`-${i}`} className="flex items-start gap-2 text-sm">
-              <span className="text-rose shrink-0 font-semibold leading-5">−</span>
-              <span className="text-ink-dim">{it}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        s.description && <p className="text-sm text-ink-dim leading-relaxed mb-4">{s.description}</p>
-      )}
+      <div className="flex-grow mb-4">
+        {(inclusions.length > 0 || exclusions.length > 0) ? (
+          <div className="space-y-1.5">
+            {inclusions.map((it, i) => (
+              <div key={`+${i}`} className="flex items-start gap-2 text-sm">
+                <span className="text-emerald shrink-0 font-semibold leading-5">+</span>
+                <span className="text-ink-dim">{it}</span>
+              </div>
+            ))}
+            {exclusions.map((it, i) => (
+              <div key={`-${i}`} className="flex items-start gap-2 text-sm">
+                <span className="text-rose shrink-0 font-semibold leading-5">−</span>
+                <span className="text-ink-dim">{it}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          s.description && <p className="text-sm text-ink-dim leading-relaxed">{s.description}</p>
+        )}
+      </div>
       <div className="text-xs text-ink-dim flex items-center gap-3 mb-4">
         <span className="flex items-center gap-1"><Clock size={11} className="text-gold" /> {s.duration} min</span>
       </div>
