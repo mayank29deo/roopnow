@@ -4,12 +4,14 @@
 // the booking." Renders as a slow, horizontal scrolling band. Pure
 // CSS animation — no JS, no framer-motion overhead.
 
-const PHRASE = "Roop is not accountable for the final outcome of the booking";
+const PHRASE =
+  "ROOP is a beauty booking management platform and we do not take any responsibility of the quality of the output by any Makeup Artist";
 const SEPARATOR = "·";
 
 // Repeated enough times that the inner row is wider than any
 // realistic viewport, so the -50% translate loop reads as continuous.
-const REPEAT = 8;
+// The phrase itself is long, so we need fewer copies than before.
+const REPEAT = 4;
 
 export function DisclaimerScroller() {
   const items = Array.from({ length: REPEAT }, (_, i) => i);
@@ -41,7 +43,7 @@ export function DisclaimerScroller() {
           to   { transform: translate3d(-50%, 0, 0); }
         }
         .animate-disclaimer-scroll {
-          animation: disclaimer-scroll 70s linear infinite;
+          animation: disclaimer-scroll 120s linear infinite;
         }
         @media (prefers-reduced-motion: reduce) {
           .animate-disclaimer-scroll { animation: none; }

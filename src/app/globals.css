@@ -98,6 +98,15 @@ body {
     letter-spacing: -0.01em;
   }
 
+  /* Editorial serif scoped to the artist profile's Professional
+     Details (18-Jun tracker item 2). Higher contrast and more refined
+     than Playfair — reads as a magazine spec sheet. */
+  .font-editorial {
+    font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+    font-optical-sizing: auto;
+    letter-spacing: 0.01em;
+  }
+
   .text-gradient-primary {
     background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-deep) 100%);
     -webkit-background-clip: text;

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Logo } from "./Logo";
 import { Menu, X, Sparkles, LayoutDashboard, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 type User = {
   id: string;
@@ -18,7 +18,6 @@ export function Nav({ user }: { user: User }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -40,9 +39,15 @@ export function Nav({ user }: { user: User }) {
   ];
 
   async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.refresh();
-    router.push("/");
+    // Hard navigation after the logout POST so the root layout (which
+    // reads the session cookie server-side) re-runs with no user.
+    // router.refresh() + router.push() left a stale Nav in some browsers
+    // (18-Jun tracker item 5 — "unable to sign out").
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      window.location.assign("/");
+    }
   }
 
   async function upgradeToArtist() {

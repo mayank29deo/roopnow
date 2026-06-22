@@ -10,9 +10,13 @@ import { useEffect, useState } from "react";
 // Used by:
 //   • LandingIntro — once per session on first landing-page load
 //   • /welcome — every time a new customer follows the email link
+// Intro timings are tuned slow enough to read — feedback from
+// users was that the original 2.7s flash went "very fast" (18-Jun
+// tracker, item 6). All keyframe delays/durations below are scaled
+// to fit comfortably inside this dismiss window.
 export function BriefcaseOpen({
   onDone,
-  autoDismissMs = 2700,
+  autoDismissMs = 4500,
 }: {
   onDone?: () => void;
   autoDismissMs?: number;
@@ -62,8 +66,8 @@ export function BriefcaseOpen({
               initial={{ y: 0, opacity: 0, scale: 0.92 }}
               animate={{ y: [0, 0, -135], opacity: [0, 1, 1], scale: [0.92, 1, 1] }}
               transition={{
-                duration: 1.7,
-                times: [0, 0.25, 1],
+                duration: 2.6,
+                times: [0, 0.22, 1],
                 ease: [0.16, 1, 0.3, 1],
               }}
               style={{
@@ -83,8 +87,8 @@ export function BriefcaseOpen({
               initial={{ y: 0, opacity: 0, scale: 0.92 }}
               animate={{ y: [0, 0, 135], opacity: [0, 1, 1], scale: [0.92, 1, 1] }}
               transition={{
-                duration: 1.7,
-                times: [0, 0.25, 1],
+                duration: 2.6,
+                times: [0, 0.22, 1],
                 ease: [0.16, 1, 0.3, 1],
               }}
               style={{
@@ -102,16 +106,16 @@ export function BriefcaseOpen({
                 {/* Eyeshadow palette — 8-pan strip */}
                 <div className="flex gap-2 justify-center">
                   {SHADES.map((c, i) => (
-                    <PowderPan key={i} color={c} delay={0.85 + i * 0.045} />
+                    <PowderPan key={i} color={c} delay={1.3 + i * 0.07} />
                   ))}
                 </div>
                 {/* Brushes + blush compacts */}
                 <div className="flex gap-3 items-center justify-center">
                   {BRUSHES.map((b, i) => (
-                    <HBrush key={`b${i}`} bristle={b.bristle} handle={b.handle} delay={1.15 + i * 0.07} />
+                    <HBrush key={`b${i}`} bristle={b.bristle} handle={b.handle} delay={1.85 + i * 0.1} />
                   ))}
                   {COMPACTS.map((c, i) => (
-                    <CompactPan key={`c${i}`} color={c} delay={1.30 + i * 0.07} />
+                    <CompactPan key={`c${i}`} color={c} delay={2.1 + i * 0.1} />
                   ))}
                 </div>
               </div>
@@ -122,7 +126,7 @@ export function BriefcaseOpen({
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
               initial={{ opacity: 0, scale: 0.5, filter: "blur(14px)" }}
               animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-              transition={{ delay: 0.8, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ delay: 1.2, duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
             >
               <Image
                 src="/logo.png"
@@ -140,7 +144,7 @@ export function BriefcaseOpen({
             className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-[0.3em] text-ink-dim"
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.5 }}
-            transition={{ delay: 1.6, duration: 0.4 }}
+            transition={{ delay: 2.4, duration: 0.5 }}
           >
             Tap to skip
           </motion.span>

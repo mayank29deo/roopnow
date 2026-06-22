@@ -1661,10 +1661,14 @@ function SkinToneSelect({ value, onChange }: { value: string; onChange: (next: s
 // ============================================================
 // Payments
 // ============================================================
-function PaymentsTab({ subscriptions, artistId }: { subscriptions: Subscription[]; artistId: string }) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function PaymentsTab({ subscriptions }: { subscriptions: Subscription[]; artistId: string }) {
+  // 18-Jun tracker item 7: the live Razorpay flow is paused while
+  // the payment gateway is still being on-boarded. Click on ₹699
+  // now surfaces a clear "we'll contact you" notice instead of
+  // opening checkout. The full pay() implementation lives in git
+  // history (search PaymentsTab pay()) — restore it when Razorpay
+  // is ready.
+  const [notice, setNotice] = useState(false);
 
   // Compute current month and whether it's paid
   const thisMonth = useMemo(() => {
@@ -1673,53 +1677,8 @@ function PaymentsTab({ subscriptions, artistId }: { subscriptions: Subscription[
   }, []);
   const paidThisMonth = subscriptions.find((s) => s.periodMonth.startsWith(thisMonth.slice(0, 7)) && s.status === "paid");
 
-  async function pay() {
-    setLoading(true); setError(null);
-    try {
-      const res = await fetch("/api/subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ periodMonth: thisMonth }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-
-      const w = window as unknown as { Razorpay?: new (opts: Record<string, unknown>) => { open: () => void } };
-      if (!w.Razorpay) {
-        const s = document.createElement("script");
-        s.src = "https://checkout.razorpay.com/v1/checkout.js";
-        document.body.appendChild(s);
-        await new Promise((r) => { s.onload = r; });
-      }
-
-      const rz = new (window as unknown as { Razorpay: new (o: Record<string, unknown>) => { open: () => void } }).Razorpay({
-        key: data.keyId,
-        order_id: data.orderId,
-        amount: data.amount,
-        currency: "INR",
-        name: "Roop",
-        description: "Monthly listing fee",
-        handler: async (resp: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
-          await fetch("/api/subscriptions/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              subscriptionId: data.subscriptionId,
-              paymentId: resp.razorpay_payment_id,
-              orderId: resp.razorpay_order_id,
-              signature: resp.razorpay_signature,
-            }),
-          });
-          router.refresh();
-        },
-        theme: { color: "#C9A97E" },
-      });
-      rz.open();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Payment failed");
-    } finally {
-      setLoading(false);
-    }
+  function handlePayClick() {
+    setNotice(true);
   }
 
   return (
@@ -1734,11 +1693,16 @@ function PaymentsTab({ subscriptions, artistId }: { subscriptions: Subscription[
               <Check size={12} /> Paid · {paidThisMonth.paidAt ? format(new Date(paidThisMonth.paidAt), "d MMM yyyy") : ""}
             </div>
           ) : (
-            <button onClick={pay} disabled={loading} className="btn-primary disabled:opacity-50">
-              {loading ? <Loader2 className="animate-spin" size={14} /> : <><CreditCard size={14} /> Pay ₹699</>}
+            <button onClick={handlePayClick} className="btn-primary">
+              <CreditCard size={14} /> Pay ₹699
             </button>
           )}
-          {error && <div className="text-sm text-rose mt-3">{error}</div>}
+          {notice && (
+            <div className="mt-4 rounded-2xl border border-gold/30 bg-gold/5 p-4 text-sm text-ink leading-relaxed">
+              <strong className="block mb-1 text-gold">Payment gateway is currently being set up.</strong>
+              Meanwhile our team will contact you for receiving the amount.
+            </div>
+          )}
         </div>
 
         <div className="glass rounded-3xl p-6 lg:p-8">

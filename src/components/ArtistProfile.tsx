@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Star, MapPin, Instagram, BadgeCheck, Award, ArrowLeft,
   Clock, Sparkles, X, ChevronLeft, ChevronRight, Share2, Heart,
+  Users, Palette, Plane, IndianRupee, FileText, CreditCard,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { BookingDrawer } from "./BookingDrawer";
@@ -418,8 +419,8 @@ export function ArtistProfile({
                 exit={{ opacity: 0 }}
                 className="max-w-3xl"
               >
-                <h3 className="font-display text-3xl mb-4">About {artist.displayName.split(" ")[0]}</h3>
-                <p className="text-ink-dim leading-loose text-lg whitespace-pre-wrap">{artist.bio}</p>
+                <h3 className="font-display text-3xl mb-5">About {artist.displayName.split(" ")[0]}</h3>
+                <p className="text-ink leading-relaxed text-xl font-display italic whitespace-pre-wrap">{artist.bio}</p>
 
                 {/* Professional details surfaced from the dashboard
                     so the customer can scan how the artist actually
@@ -472,10 +473,17 @@ export function ArtistProfile({
   );
 }
 
-// Renders all the Phase 3 professional-detail fields on the public
+// Renders the Phase 3 professional-detail fields on the public
 // profile. Each block only appears if the artist has filled it in,
 // so the section stays clean for new artists who haven't completed
 // the form yet.
+//
+// Layout direction (18-Jun tracker, items 2/3/4):
+//   • Heading + answer same size (both text-lg)
+//   • Heading uses gold accent + display font, answer uses cream ink
+//     → visibly distinct colour (was both warm tones / hard to tell apart)
+//   • Each field rendered as an icon-led card so the section reads as
+//     a structured spec sheet instead of a free-form list
 function ProfessionalDetailsBlock({ artist }: { artist: Artist }) {
   const brands = artist.cosmeticBrands.split(",").map((b) => b.trim()).filter(Boolean);
   const outstationPoints = artist.outstationConditions
@@ -491,111 +499,124 @@ function ProfessionalDetailsBlock({ artist }: { artist: Artist }) {
         ? "At studio or client's location"
         : "At studio";
 
-  // Hide the whole block if nothing meaningful is set (no enums beyond
-  // defaults, no payment info, no outstation, no brands, no acne).
-  const hasAnythingMeaningful =
-    brands.length > 0 ||
-    artist.outstationAvailable ||
-    artist.acneExperience ||
-    !!artist.paymentStructure ||
-    !!artist.paymentModes ||
-    !!artist.paymentNotes ||
-    artist.invoiceAvailable;
-  // We still want to show artistType + serviceMode even if everything
-  // else is blank — those are useful defaults.
+  const hasPaymentInfo =
+    !!artist.paymentStructure || !!artist.paymentModes || !!artist.paymentNotes || artist.invoiceAvailable;
 
   return (
-    <>
-      <h3 className="font-display text-3xl mb-6">Professional details</h3>
+    <section>
+      <h3 className="font-editorial text-4xl mb-8 tracking-tight">Professional details</h3>
 
-      <div className="grid sm:grid-cols-2 gap-x-10 gap-y-6">
-        <DetailRow label="Artist type" value={artistTypeLabel} />
-        <DetailRow label="Service mode" value={serviceModeLabel} />
+      {/* Top-row anchor cards — always shown */}
+      <div className="grid sm:grid-cols-2 gap-4 mb-4">
+        <DetailCard icon={Users} label="Artist type" value={artistTypeLabel} />
+        <DetailCard icon={MapPin} label="Service mode" value={serviceModeLabel} />
       </div>
 
       {brands.length > 0 && (
-        <div className="mt-10">
-          <DetailLabel>Cosmetic brands used</DetailLabel>
+        <DetailPanel icon={Palette} label="Cosmetic brands used">
           <div className="flex flex-wrap gap-2">
             {brands.map((b) => (
               <span key={b} className="chip">{b}</span>
             ))}
           </div>
-        </div>
+        </DetailPanel>
       )}
 
       {artist.outstationAvailable && (
-        <div className="mt-10">
-          <DetailLabel>Outstation booking</DetailLabel>
-          <p className="text-ink-dim text-sm mb-3">Available for travel beyond home city.</p>
+        <DetailPanel icon={Plane} label="Outstation booking">
+          <p className="text-ink text-lg mb-3">Available for travel beyond home city.</p>
           {outstationPoints.length > 0 && (
-            <ul className="space-y-1.5 text-sm text-ink-dim">
+            <ul className="space-y-1.5 text-base text-ink-dim">
               {outstationPoints.map((p, i) => (
                 <li key={i} className="flex items-start gap-2">
-                  <span className="text-gold leading-5">•</span>
+                  <span className="text-gold leading-6">•</span>
                   <span>{p}</span>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </DetailPanel>
       )}
 
       {artist.acneExperience && (
-        <div className="mt-10">
-          <DetailLabel>Skin sensitivities</DetailLabel>
-          <p className="text-ink-dim text-sm">
+        <DetailPanel icon={Heart} label="Skin sensitivities">
+          <p className="text-ink text-lg">
             Experience working with acne and other skin conditions.
           </p>
           {artist.acneExperienceDetails && (
-            <p className="text-ink-dim text-sm mt-2 whitespace-pre-wrap">
+            <p className="text-ink-dim text-base mt-2 whitespace-pre-wrap">
               {artist.acneExperienceDetails}
             </p>
           )}
-        </div>
+        </DetailPanel>
       )}
 
-      {hasAnythingMeaningful && (artist.paymentStructure || artist.paymentModes || artist.invoiceAvailable || artist.paymentNotes) && (
-        <div className="mt-12">
-          <h4 className="font-display text-2xl mb-4">Payments &amp; settlement</h4>
-          <div className="grid sm:grid-cols-2 gap-x-10 gap-y-6">
+      {hasPaymentInfo && (
+        <div className="mt-10">
+          <div className="flex items-center gap-3 mb-5">
+            <IconBadge icon={IndianRupee} />
+            <h4 className="font-editorial text-3xl text-gold tracking-tight">Payments &amp; settlement</h4>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4 mb-4">
             {artist.paymentStructure && (
-              <DetailRow label="Payment structure" value={artist.paymentStructure} />
+              <DetailCard icon={CreditCard} label="Payment structure" value={artist.paymentStructure} />
             )}
             {artist.paymentModes && (
-              <DetailRow label="Accepted modes" value={artist.paymentModes} />
+              <DetailCard icon={CreditCard} label="Accepted modes" value={artist.paymentModes} />
             )}
-            <DetailRow
+            <DetailCard
+              icon={FileText}
               label="Invoice"
               value={artist.invoiceAvailable ? "Provided on request" : "Not provided"}
             />
           </div>
           {artist.paymentNotes && (
-            <div className="mt-6">
-              <DetailLabel>Additional notes</DetailLabel>
-              <p className="text-ink-dim text-sm whitespace-pre-wrap">{artist.paymentNotes}</p>
-            </div>
+            <DetailPanel icon={FileText} label="Additional notes">
+              <p className="text-ink text-lg whitespace-pre-wrap leading-relaxed">{artist.paymentNotes}</p>
+            </DetailPanel>
           )}
         </div>
       )}
-    </>
+    </section>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+// Icon-led card for short label/value pairs. Heading and value
+// share the same font-size (text-lg) but different colours — gold
+// label, cream value — so a quick scan can pick out either.
+function DetailCard({ icon: Icon, label, value }: {
+  icon: typeof Sparkles; label: string; value: string;
+}) {
   return (
-    <div>
-      <DetailLabel>{label}</DetailLabel>
-      <div className="text-ink">{value}</div>
+    <div className="rounded-3xl border border-border bg-surface/40 p-5 flex items-start gap-4">
+      <IconBadge icon={Icon} />
+      <div className="min-w-0 flex-1">
+        <div className="font-editorial text-xl text-gold leading-snug">{label}</div>
+        <div className="text-lg text-ink leading-snug mt-0.5">{value}</div>
+      </div>
     </div>
   );
 }
 
-function DetailLabel({ children }: { children: React.ReactNode }) {
+// Larger panel for fields that have list / paragraph content.
+function DetailPanel({ icon: Icon, label, children }: {
+  icon: typeof Sparkles; label: string; children: React.ReactNode;
+}) {
   return (
-    <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2 flex items-center gap-1.5">
-      <span className="w-1 h-1 rounded-full bg-gold" />
-      {children}
+    <div className="rounded-3xl border border-border bg-surface/40 p-6 mb-4">
+      <div className="flex items-center gap-3 mb-3">
+        <IconBadge icon={Icon} />
+        <div className="font-editorial text-xl text-gold">{label}</div>
+      </div>
+      <div className="pl-[52px]">{children}</div>
+    </div>
+  );
+}
+
+function IconBadge({ icon: Icon }: { icon: typeof Sparkles }) {
+  return (
+    <div className="w-10 h-10 rounded-2xl bg-gold/10 text-gold flex items-center justify-center shrink-0 border border-gold/20">
+      <Icon size={17} />
     </div>
   );
 }
