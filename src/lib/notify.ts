@@ -219,7 +219,7 @@ function brandedEmail(opts: {
                 <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#C9A97E;margin:0;line-height:1.6;text-align:center;">
                   <a href="${SITE_URL}" style="color:#C9A97E;text-decoration:none;">roopnow.com</a>
                   &nbsp;&middot;&nbsp;
-                  <a href="https://instagram.com/roopnow" style="color:#C9A97E;text-decoration:none;">Instagram</a>
+                  <a href="https://www.instagram.com/roop.now" style="color:#C9A97E;text-decoration:none;">Instagram</a>
                   &nbsp;&middot;&nbsp;
                   <a href="mailto:hello@roopnow.com" style="color:#C9A97E;text-decoration:none;">Support</a>
                 </p>
