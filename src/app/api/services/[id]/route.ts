@@ -15,6 +15,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       description: body.description ?? "",
       inclusions: body.inclusions ?? "",
       exclusions: body.exclusions ?? "",
+      trial_makeup_available: body.trialMakeupAvailable ?? false,
       duration: body.duration,
       price: body.price,
       category: body.category,

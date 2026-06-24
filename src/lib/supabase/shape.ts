@@ -38,6 +38,7 @@ type RawArtistWithRelations = {
     description?: string;
     inclusions?: string;
     exclusions?: string;
+    trial_makeup_available?: boolean;
     duration?: number;
   }[];
 };
@@ -106,6 +107,7 @@ export function toProfileArtist(a: RawArtistWithRelations) {
       description: s.description ?? "",
       inclusions: s.inclusions ?? "",
       exclusions: s.exclusions ?? "",
+      trialMakeupAvailable: s.trial_makeup_available ?? false,
       duration: s.duration ?? 0,
       price: s.price,
       category: s.category ?? "",

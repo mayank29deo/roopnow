@@ -17,6 +17,7 @@ type Service = {
   description: string;
   inclusions: string;
   exclusions: string;
+  trialMakeupAvailable: boolean;
   duration: number; price: number; category: string;
 };
 type Artist = {

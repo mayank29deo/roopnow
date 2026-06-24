@@ -3,27 +3,28 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 
+// Category tiles on the landing page. Sheet 15-1 (23-Jun tracker)
+// asked us to drop the "X+ Artists" badge overlay since the numbers
+// are pre-launch / placeholder. The field stayed off the data shape
+// too so nothing references it accidentally.
 const categories = [
   {
     name: "Bridal",
     desc: "From sangeet to the big day — crafted looks that last 12+ hours.",
     img: "/landing/service-bridal.jpg",
     accent: "from-rose/70 via-plum/60 to-bg",
-    count: "180+ Artists",
   },
   {
     name: "Party & Glam",
     desc: "Birthday, cocktail, date night — show up like the main character.",
     img: "/landing/service-party.jpg",
     accent: "from-violet/70 via-plum/60 to-bg",
-    count: "240+ Artists",
   },
   {
     name: "Editorial",
     desc: "Lookbooks, campaigns, magazine covers. Camera-ready artistry.",
     img: "/landing/service-editorial.jpg",
     accent: "from-gold/70 via-amber/50 to-bg",
-    count: "90+ Artists",
   },
   {
     name: "His Look",
@@ -33,21 +34,18 @@ const categories = [
     // view instead of letting object-cover crop it off the top.
     objectPosition: "center 20%",
     accent: "from-emerald/70 via-teal/50 to-bg",
-    count: "65+ Artists",
   },
   {
     name: "Just the Hair",
     desc: "Blowouts, updos, color, extensions — the full crown treatment.",
     img: "/landing/service-just-the-hair.jpg",
     accent: "from-ruby/70 via-wine/50 to-bg",
-    count: "320+ Artists",
   },
   {
     name: "Family Makeup",
     desc: "Pre-wedding family glam, group shoots, parents & siblings — everyone glowing.",
     img: "/landing/service-family-makeup.jpg",
     accent: "from-violet/70 via-ruby/60 to-bg",
-    count: "40+ Artists",
   },
 ];
 
@@ -94,10 +92,6 @@ export function ServiceCategories() {
                 />
                 <div className={`absolute inset-0 bg-gradient-to-t ${c.accent} opacity-80`} />
                 <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
-
-                <div className="absolute top-5 right-5">
-                  <div className="chip bg-bg/40 backdrop-blur-sm">{c.count}</div>
-                </div>
 
                 <div className="absolute inset-x-0 bottom-0 p-6 lg:p-8">
                   <h3 className="font-display text-4xl lg:text-5xl mb-2 group-hover:translate-x-1 transition-transform">

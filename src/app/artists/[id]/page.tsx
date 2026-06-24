@@ -30,7 +30,7 @@ export default async function ArtistPage({
     const [artistRes, reviewsRes, bookingsRes, eventsRes, blocksRes, chargesRes] = await Promise.all([
       supabase
         .from("artists")
-        .select("*, portfolio_items(id, image_url, caption, sort_order), services(id, name, description, inclusions, exclusions, duration, price, category)")
+        .select("*, portfolio_items(id, image_url, caption, sort_order), services(id, name, description, inclusions, exclusions, trial_makeup_available, duration, price, category)")
         .eq("id", id)
         .maybeSingle(),
       supabase

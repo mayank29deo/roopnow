@@ -130,6 +130,7 @@ export default async function ArtistDashboard() {
       services={(servicesRes.data ?? []).map((s) => ({
         id: s.id, name: s.name, description: s.description,
         inclusions: s.inclusions ?? "", exclusions: s.exclusions ?? "",
+        trialMakeupAvailable: s.trial_makeup_available ?? false,
         duration: s.duration, price: s.price, category: s.category,
       }))}
       additionalCharges={(chargesRes.data ?? []).map((c) => ({

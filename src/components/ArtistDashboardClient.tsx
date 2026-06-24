@@ -62,6 +62,7 @@ type Service = {
   description: string;            // legacy — UI now uses inclusions/exclusions
   inclusions: string;
   exclusions: string;
+  trialMakeupAvailable: boolean;  // 23-Jun tracker item 2
   duration: number; price: number; category: string;
 };
 type AdditionalCharge = {
@@ -851,8 +852,15 @@ function ServiceCard({ service: s, onEdit, onRemove }: { service: Service; onEdi
           s.description && <p className="text-sm text-ink-dim leading-relaxed">{s.description}</p>
         )}
       </div>
-      <div className="text-xs text-ink-dim flex items-center gap-3 mb-4">
+      <div className="text-xs text-ink-dim flex items-center gap-3 mb-4 flex-wrap">
         <span className="flex items-center gap-1"><Clock size={11} className="text-gold" /> {s.duration} min</span>
+        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+          s.trialMakeupAvailable
+            ? "border-emerald/40 text-emerald bg-emerald/5"
+            : "border-border text-ink-dim"
+        }`}>
+          Trial makeup: {s.trialMakeupAvailable ? "Yes" : "No"}
+        </span>
       </div>
       <div className="flex gap-2">
         <button onClick={onEdit} className="btn-ghost text-xs py-2 px-3"><Edit3 size={12} />Edit</button>
@@ -887,6 +895,7 @@ function ServiceEditor({ initial, artistId, onClose, onSaved }: {
   const seededInclusions = initial?.inclusions || (initial?.description && !initial.exclusions ? initial.description : "");
   const [inclusions, setInclusions] = useState(seededInclusions ?? "");
   const [exclusions, setExclusions] = useState(initial?.exclusions ?? "");
+  const [trialMakeupAvailable, setTrialMakeupAvailable] = useState(initial?.trialMakeupAvailable ?? false);
   const [duration, setDuration] = useState(initial?.duration ?? 60);
   const [price, setPrice] = useState(initial?.price ?? 5000);
   const [category, setCategory] = useState(initial?.category ?? "Bridal");
@@ -906,6 +915,7 @@ function ServiceEditor({ initial, artistId, onClose, onSaved }: {
           description: initial?.description ?? "", // preserved untouched on edit
           inclusions,
           exclusions,
+          trialMakeupAvailable,
           duration,
           price,
           category,
@@ -958,6 +968,34 @@ function ServiceEditor({ initial, artistId, onClose, onSaved }: {
           />
         </label>
       </div>
+
+      {/* 23-Jun tracker item 2: customers want to know up-front whether a
+          trial makeup can be arranged for this service. Yes/No segmented
+          choice mirrors the same control we use elsewhere. */}
+      <ModalField label="Will the trial makeup be done, if asked?">
+        <div className="flex gap-2">
+          {[
+            { value: true, label: "Yes" },
+            { value: false, label: "No" },
+          ].map((opt) => {
+            const active = trialMakeupAvailable === opt.value;
+            return (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => setTrialMakeupAvailable(opt.value)}
+                className={`flex-1 rounded-2xl border px-4 py-2.5 text-sm font-medium transition-colors ${
+                  active
+                    ? "border-gold bg-gradient-to-br from-gold/20 to-amber/10 text-ink"
+                    : "border-border bg-surface/40 hover:border-gold/40 text-ink-dim"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </ModalField>
 
       <Grid>
         <ModalField label="Duration (min)"><input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="dash-input" min={15} step={15} /></ModalField>

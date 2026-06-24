@@ -65,6 +65,7 @@ export type Service = {
   description: string;   // legacy — UI now uses inclusions/exclusions
   inclusions: string;
   exclusions: string;
+  trial_makeup_available: boolean;
   duration: number;
   price: number;
   category: string;

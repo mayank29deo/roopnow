@@ -45,6 +45,7 @@ type Artist = {
     description: string;
     inclusions: string;
     exclusions: string;
+    trialMakeupAvailable: boolean;
     duration: number; price: number; category: string;
   }[];
   reviews: { id: string; rating: number; comment: string; userName: string; createdAt: string }[];
@@ -61,7 +62,10 @@ export function ArtistProfile({
   availability: AvailabilityInput;
 }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const [tab, setTab] = useState<"services" | "portfolio" | "availability" | "reviews" | "about">("services");
+  // Tab order matters — Sheet 15 (23-Jun tracker) flagged that
+  // About answers most pre-booking questions, so it's promoted to
+  // sit right beside Services so visitors don't miss it at the end.
+  const [tab, setTab] = useState<"services" | "about" | "portfolio" | "availability" | "reviews">("services");
   const [booking, setBooking] = useState<Artist["services"][0] | null>(null);
   // When a customer clicks a date on the Availability tab, we open the
   // booking drawer with that date pre-picked so step 2 only needs a
@@ -214,7 +218,7 @@ export function ArtistProfile({
       <section className="mt-12">
         <div className="max-w-7xl mx-auto px-5 lg:px-8">
           <div className="border-b border-border flex gap-6 overflow-x-auto">
-            {(["services", "portfolio", "availability", "reviews", "about"] as const).map((t) => (
+            {(["services", "about", "portfolio", "availability", "reviews"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -290,6 +294,15 @@ export function ArtistProfile({
                             s.description && (
                               <p className="text-ink-dim text-sm leading-relaxed">{s.description}</p>
                             )
+                          )}
+                          {/* 23-Jun tracker item 2: trial-makeup hint surfaces
+                              on cards where the artist opted in. Hidden when
+                              false to keep the card clean. */}
+                          {s.trialMakeupAvailable && (
+                            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald/40 bg-emerald/5 px-2.5 py-1 text-[11px] font-medium text-emerald">
+                              <Sparkles size={11} />
+                              Trial makeup available on request
+                            </div>
                           )}
                         </div>
                         <button
@@ -420,7 +433,12 @@ export function ArtistProfile({
                 className="max-w-3xl"
               >
                 <h3 className="font-display text-3xl mb-5">About {artist.displayName.split(" ")[0]}</h3>
-                <p className="text-ink leading-relaxed text-xl font-display italic whitespace-pre-wrap">{artist.bio}</p>
+                {/* Sheet 15-2 (23-Jun tracker): bio rendered noticeably
+                    heavy in Playfair italic. Switched to Cormorant
+                    Garamond italic at weight 400 — same editorial vibe,
+                    a lighter visual weight, and visually consistent
+                    with the Professional Details serif. */}
+                <p className="text-ink leading-relaxed text-xl font-editorial italic font-normal whitespace-pre-wrap">{artist.bio}</p>
 
                 {/* Professional details surfaced from the dashboard
                     so the customer can scan how the artist actually

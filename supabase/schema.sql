@@ -114,6 +114,11 @@ create table if not exists public.services (
 alter table public.services add column if not exists inclusions text not null default '';
 alter table public.services add column if not exists exclusions text not null default '';
 
+-- 23-Jun tracker (item 2): per-service "trial makeup on request" flag.
+-- Surfaced on the public service card so customers know up-front whether
+-- a trial can be arranged.
+alter table public.services add column if not exists trial_makeup_available boolean not null default false;
+
 create table if not exists public.bookings (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references public.profiles(id) on delete cascade,
