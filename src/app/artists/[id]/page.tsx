@@ -20,8 +20,20 @@ export default async function ArtistPage({
     id: string; rating: number; comment: string; created_at: string;
     profiles: { name: string } | null;
   }> = [];
-  let bookings: { date: string; status: string }[] = [];
-  let events: { event_date: string }[] = [];
+  // 28-Jun: bookings + events now carry start/end times so the
+  // BookingDrawer can render "already scheduled" entries and
+  // compute "available windows" against business hours.
+  let bookings: {
+    date: string; status: string;
+    time_slot: string | null;
+    duration_minutes: number | null;
+    services: { duration: number | null } | null;
+  }[] = [];
+  let events: {
+    event_date: string;
+    start_time: string | null;
+    end_time: string | null;
+  }[] = [];
   let blocks: { blocked_date: string }[] = [];
   let additionalCharges: { id: string; name: string; description: string; sort_order: number }[] = [];
 
@@ -40,11 +52,11 @@ export default async function ArtistPage({
         .order("created_at", { ascending: false }),
       supabase
         .from("bookings")
-        .select("date, status")
+        .select("date, status, time_slot, duration_minutes, services(duration)")
         .eq("artist_id", id),
       supabase
         .from("artist_events")
-        .select("event_date")
+        .select("event_date, start_time, end_time")
         .eq("artist_id", id),
       supabase
         .from("artist_blocked_dates")
@@ -58,7 +70,7 @@ export default async function ArtistPage({
     ]);
     rawArtist = artistRes.data;
     rawReviews = (reviewsRes.data ?? []) as unknown as typeof rawReviews;
-    bookings = bookingsRes.data ?? [];
+    bookings = (bookingsRes.data ?? []) as unknown as typeof bookings;
     events = eventsRes.data ?? [];
     blocks = blocksRes.data ?? [];
     additionalCharges = chargesRes.data ?? [];

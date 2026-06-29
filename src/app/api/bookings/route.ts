@@ -7,9 +7,17 @@ const schema = z.object({
   artistId: z.string(),
   serviceId: z.string(),
   date: z.string(),
-  timeSlot: z.string(),
+  // 28-Jun calendar redesign: drawer now sends arrivalTime + durationMinutes.
+  // timeSlot kept for back-compat with any older caller — if both are sent
+  // we prefer arrivalTime since that's the new canonical field.
+  arrivalTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  timeSlot: z.string().optional(),
+  durationMinutes: z.number().int().positive().optional(),
   eventName: z.string().min(1, "Event name is required"),
+  // budget kept here as optional for backward-compat with any caller
+  // that still sends it — UI no longer collects it (24-Jun tracker #3).
   budget: z.number().int().nonnegative().optional(),
+  partySize: z.number().int().positive().optional(),
   notes: z.string().optional(),
   address: z.string().min(1, "Address is required"),
   phone: z.string().min(7, "A reachable phone number is required"),
@@ -21,6 +29,10 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Please log in to book." }, { status: 401 });
 
     const data = schema.parse(await req.json());
+    const arrival = data.arrivalTime ?? data.timeSlot;
+    if (!arrival) {
+      return NextResponse.json({ error: "Arrival time is required." }, { status: 400 });
+    }
     const supabase = await createClient();
 
     const { data: service } = await supabase
@@ -37,10 +49,12 @@ export async function POST(req: NextRequest) {
         artist_id: data.artistId,
         service_id: data.serviceId,
         date: data.date,
-        time_slot: data.timeSlot,
+        time_slot: arrival,
+        duration_minutes: data.durationMinutes ?? null,
         total_price: service.price,
         event_name: data.eventName,
         budget: data.budget ?? null,
+        party_size: data.partySize ?? null,
         notes: data.notes ?? null,
         address: data.address,
         customer_phone: data.phone,

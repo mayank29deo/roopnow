@@ -9,6 +9,8 @@ type BookingJoin = {
   id: string; date: string; time_slot: string; status: string;
   total_price: number; notes: string | null; address: string | null;
   event_name: string | null; budget: number | null; rejection_reason: string | null;
+  party_size: number | null;
+  duration_minutes: number | null;
   customer_phone: string | null;
   profiles: { name: string; email: string; phone: string | null } | null;
   services: { name: string; category: string; duration: number } | null;
@@ -28,7 +30,7 @@ export default async function ArtistDashboard() {
     supabase.from("bookings")
       .select(`
         id, date, time_slot, status, total_price, notes, address,
-        event_name, budget, rejection_reason, customer_phone,
+        event_name, budget, rejection_reason, party_size, duration_minutes, customer_phone,
         profiles ( name, email, phone ),
         services ( name, category, duration )
       `)
@@ -61,8 +63,12 @@ export default async function ArtistDashboard() {
   const avgRating = reviews.length ? reviews.reduce((a, b) => a + b.rating, 0) / reviews.length : 0;
 
   const availability = buildAvailability(
-    bookings.map((b) => ({ date: b.date, status: b.status })),
-    events.map((e) => ({ event_date: e.event_date })),
+    bookings.map((b) => ({
+      date: b.date, status: b.status,
+      time_slot: b.time_slot, duration_minutes: b.duration_minutes,
+      services: b.services ? { duration: b.services.duration } : null,
+    })),
+    events.map((e) => ({ event_date: e.event_date, start_time: e.start_time, end_time: e.end_time })),
     blocks.map((b) => ({ blocked_date: b.blocked_date })),
     artistRow.max_bookings_per_day ?? undefined,
   );
@@ -119,6 +125,7 @@ export default async function ArtistDashboard() {
         address: b.address,
         eventName: b.event_name,
         budget: b.budget,
+        partySize: b.party_size,
         rejectionReason: b.rejection_reason,
         customerName: b.profiles?.name ?? "—",
         customerPhone: b.customer_phone ?? b.profiles?.phone ?? null,

@@ -53,7 +53,7 @@ const SKIN_TONE_OPTIONS = [
 type Booking = {
   id: string; date: string; timeSlot: string; status: string;
   totalPrice: number; notes: string | null; address: string | null;
-  eventName: string | null; budget: number | null; rejectionReason: string | null;
+  eventName: string | null; budget: number | null; partySize: number | null; rejectionReason: string | null;
   customerName: string; customerPhone: string | null; customerEmail: string | null;
   serviceName: string; serviceCategory: string; serviceDuration: number;
 };
@@ -330,7 +330,7 @@ function RequestCard({ booking }: { booking: Booking }) {
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="chip text-gold border-gold/30">Pending</span>
             <span className="chip">{booking.serviceCategory}</span>
-            {booking.budget && <span className="chip">Budget: {formatPrice(booking.budget)}</span>}
+            {booking.partySize && <span className="chip">{booking.partySize} {booking.partySize === 1 ? "person" : "people"}</span>}
           </div>
           <div className="font-display text-2xl mb-1">{booking.eventName ?? booking.serviceName}</div>
           <div className="text-sm text-ink-dim">
@@ -375,22 +375,25 @@ function RequestCard({ booking }: { booking: Booking }) {
           </div>
         </div>
       ) : (
-        <div className="mt-5 pt-5 border-t border-border flex items-center justify-between gap-3">
-          {error ? <span className="text-xs text-rose">{error}</span> : <span />}
-          <div className="flex gap-2">
+        // 24-Jun tracker #5: Accept and Reject made noticeably bigger
+        // and split into equal half-width pills so neither feels like
+        // the secondary action. Stacked on mobile for tappability.
+        <div className="mt-5 pt-5 border-t border-border">
+          {error && <div className="text-sm text-rose mb-3">{error}</div>}
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => setMode("rejecting")}
               disabled={mode === "loading"}
-              className="btn-ghost text-sm py-2 px-4 text-rose border-rose/30 hover:bg-rose/10 disabled:opacity-50"
+              className="btn-ghost flex-1 py-3.5 px-6 text-base font-semibold text-rose border-rose/40 hover:bg-rose/10 disabled:opacity-50"
             >
-              Reject
+              <X size={16} /> Reject
             </button>
             <button
               onClick={() => act("accept")}
               disabled={mode === "loading"}
-              className="btn-primary text-sm py-2 px-5 disabled:opacity-50"
+              className="btn-primary flex-1 py-3.5 px-6 text-base font-semibold disabled:opacity-50"
             >
-              {mode === "loading" ? <Loader2 className="animate-spin" size={14} /> : <><Check size={14} /> Accept</>}
+              {mode === "loading" ? <Loader2 className="animate-spin" size={16} /> : <><Check size={16} /> Accept</>}
             </button>
           </div>
         </div>

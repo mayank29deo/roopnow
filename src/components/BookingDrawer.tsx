@@ -5,12 +5,19 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, ChevronLeft, ChevronRight, Check, Clock, Calendar,
-  Sparkles, Loader2, MapPin, LogIn, IndianRupee, PartyPopper, Phone,
+  Sparkles, Loader2, MapPin, LogIn, Users, PartyPopper, Phone,
 } from "lucide-react";
 import { formatPrice, formatDateLong } from "@/lib/utils";
 import { format } from "date-fns";
 import { AvailabilityCalendar } from "./AvailabilityCalendar";
-import type { AvailabilityInput } from "@/lib/availability";
+import {
+  type AvailabilityInput,
+  availableWindows,
+  formatRange,
+  formatTime,
+  isoDay,
+  DURATION_PRESETS,
+} from "@/lib/availability";
 
 type Service = {
   id: string; name: string;
@@ -24,8 +31,6 @@ type Artist = {
   id: string; displayName: string; avatarUrl: string;
   city: string; area: string; services: Service[];
 };
-
-const slots = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
 
 export function BookingDrawer({
   artist, user, service, availability, onClose, onChangeService, initialDate,
@@ -44,7 +49,11 @@ export function BookingDrawer({
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [date, setDate] = useState<Date | null>(initialDate ?? null);
+  // 28-Jun calendar redesign: fixed slot grid replaced with a free-form
+  // arrival time + duration preset. `slot` is the arrival time "HH:MM";
+  // `durationMinutes` is the customer-chosen total time block.
   const [slot, setSlot] = useState<string | null>(null);
+  const [durationMinutes, setDurationMinutes] = useState<number>(DURATION_PRESETS[1].minutes);
   // Ref on the slot-picker block so we can scroll it into view the
   // moment a date is picked — drawer content is taller than most
   // viewports, the picker rendered below the calendar would otherwise
@@ -60,7 +69,7 @@ export function BookingDrawer({
     }
   }, [date, step]);
   const [eventName, setEventName] = useState("");
-  const [budget, setBudget] = useState("");
+  const [partySize, setPartySize] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
@@ -71,8 +80,9 @@ export function BookingDrawer({
     setStep(1);
     setDate(null);
     setSlot(null);
+    setDurationMinutes(DURATION_PRESETS[1].minutes);
     setEventName("");
-    setBudget("");
+    setPartySize("");
     setAddress("");
     setPhone("");
     setNotes("");
@@ -92,9 +102,10 @@ export function BookingDrawer({
           artistId: artist.id,
           serviceId: service.id,
           date: date.toISOString(),
-          timeSlot: slot,
+          arrivalTime: slot,
+          durationMinutes,
           eventName,
-          budget: budget ? Number(budget) : undefined,
+          partySize: partySize ? Number(partySize) : undefined,
           address,
           phone,
           notes,
@@ -212,7 +223,7 @@ export function BookingDrawer({
 
               {step === 2 && service && (
                 <div>
-                  <h3 className="font-display text-2xl mb-1">Pick date & time</h3>
+                  <h3 className="font-display text-2xl mb-1">Pick date & arrival time</h3>
                   <p className="text-sm text-ink-dim mb-5">
                     Unavailable dates are shown in red. Pick a free or partially-booked day.
                   </p>
@@ -231,26 +242,16 @@ export function BookingDrawer({
                       ref={slotPickerRef}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="scroll-mt-4"
+                      className="scroll-mt-4 space-y-5"
                     >
-                      <div className="text-xs uppercase tracking-widest text-ink-dim mb-3 flex items-center gap-1.5">
-                        <Clock size={12} className="text-gold" /> Time slot · {format(date, "EEE, d MMM")}
-                      </div>
-                      <div className="grid grid-cols-4 gap-2">
-                        {slots.map((s) => (
-                          <button
-                            key={s}
-                            onClick={() => setSlot(s)}
-                            className={`p-2.5 rounded-xl text-sm border transition-all ${
-                              slot === s
-                                ? "border-gold bg-gradient-to-br from-gold/20 to-transparent"
-                                : "border-border bg-surface/50 hover:border-gold/40"
-                            }`}
-                          >
-                            {s}
-                          </button>
-                        ))}
-                      </div>
+                      <DatePicker
+                        date={date}
+                        availability={availability}
+                        arrivalTime={slot}
+                        onArrivalChange={setSlot}
+                        durationMinutes={durationMinutes}
+                        onDurationChange={setDurationMinutes}
+                      />
                     </motion.div>
                   )}
                 </div>
@@ -305,12 +306,12 @@ export function BookingDrawer({
 
                   <label className="block mb-4">
                     <span className="text-xs uppercase tracking-widest text-ink-dim mb-2 block flex items-center gap-1.5">
-                      <IndianRupee size={12} className="text-gold" /> Budget (optional)
+                      <Users size={12} className="text-gold" /> No. of people availing this service
                     </span>
                     <input
-                      value={budget}
-                      onChange={(e) => setBudget(e.target.value.replace(/[^0-9]/g, ""))}
-                      placeholder="e.g. 15000"
+                      value={partySize}
+                      onChange={(e) => setPartySize(e.target.value.replace(/[^0-9]/g, ""))}
+                      placeholder="e.g. 4"
                       inputMode="numeric"
                       className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-gold/50 outline-none"
                     />
@@ -332,7 +333,8 @@ export function BookingDrawer({
                     <div className="space-y-2 text-sm">
                       <Row label="Service" value={service.name} />
                       <Row label="Date" value={date ? formatDateLong(date) : "—"} />
-                      <Row label="Time" value={slot || "—"} />
+                      <Row label="Arrival" value={slot ? formatTime(slot) : "—"} />
+                      <Row label="Duration" value={formatDuration(durationMinutes)} />
                       <div className="h-px bg-border my-2" />
                       <Row label="Quoted price" value={formatPrice(service.price)} big />
                     </div>
@@ -356,19 +358,29 @@ export function BookingDrawer({
                     <Check size={40} className="text-wine-deep" strokeWidth={3} />
                   </motion.div>
                   <h3 className="font-display text-4xl mb-3">Request sent!</h3>
+                  {/* 24-Jun tracker #6: explicit template-literal interpolation
+                      so the space between the artist name and "will" can never
+                      collapse via JSX whitespace handling. */}
                   <p className="text-ink-dim mb-8">
-                    {artist.displayName} will review your request and get back with an accept or reject.
-                    You&apos;ll be notified by email the moment they respond.
+                    {`${artist.displayName} will review your request and get back with an accept or reject. You'll be notified by email the moment they respond.`}
                   </p>
                   <div className="glass rounded-2xl p-5 mb-6 text-left">
                     <Row label="Event" value={eventName} />
                     <Row label="Artist" value={artist.displayName} />
-                    <Row label="When" value={`${date ? formatDateLong(date) : ""} at ${slot}`} />
+                    <Row label="When" value={`${date ? formatDateLong(date) : ""} at ${slot ? formatTime(slot) : ""}`} />
                     <Row label="Status" value="Pending" big />
                   </div>
-                  <Link href="/dashboard" onClick={reset} className="btn-primary w-full">
-                    Track my requests
-                  </Link>
+                  {/* 24-Jun tracker #4: success screen stays put until the
+                      customer dismisses it. Track-my-requests navigates;
+                      Close just dismisses the drawer in-place. */}
+                  <div className="flex flex-col gap-3">
+                    <Link href="/dashboard" onClick={reset} className="btn-primary w-full">
+                      Track my requests
+                    </Link>
+                    <button onClick={reset} className="btn-ghost w-full">
+                      Close
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </div>
@@ -409,11 +421,178 @@ export function BookingDrawer({
   );
 }
 
+function formatDuration(minutes: number): string {
+  const preset = DURATION_PRESETS.find((p) => p.minutes === minutes);
+  if (preset) return preset.label;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `~${h} hrs` : `~${h}h ${m}m`;
+}
+
 function Row({ label, value, big }: { label: string; value: string; big?: boolean }) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-ink-dim text-xs uppercase tracking-wider">{label}</span>
       <span className={big ? "font-display text-xl text-gradient-rose" : "text-ink font-medium"}>{value}</span>
+    </div>
+  );
+}
+
+// 28-Jun calendar redesign — date-tapped picker. Shows existing
+// bookings on the day (so the customer can see what's locked), the
+// free windows between them, and a free-form arrival time + duration
+// preset. Replaces the old fixed-slot grid.
+function DatePicker({
+  date, availability, arrivalTime, onArrivalChange,
+  durationMinutes, onDurationChange,
+}: {
+  date: Date;
+  availability: AvailabilityInput;
+  arrivalTime: string | null;
+  onArrivalChange: (v: string) => void;
+  durationMinutes: number;
+  onDurationChange: (v: number) => void;
+}) {
+  const dayKey = isoDay(date);
+  const slots = availability.slotsByDay[dayKey] ?? [];
+  const windows = availableWindows(dayKey, availability);
+  const isOpen = slots.length === 0;
+
+  return (
+    <>
+      {/* Header line — yellow if there's existing bookings, green if not */}
+      <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-widest ${
+        isOpen
+          ? "bg-emerald/10 border border-emerald/30 text-emerald"
+          : "bg-gold/10 border border-gold/30 text-gold"
+      }`}>
+        {isOpen ? "Fully available" : "Partially booked"} · {format(date, "d MMM")}
+      </div>
+
+      {/* Already scheduled — only when the artist already has bookings */}
+      {slots.length > 0 && (
+        <section>
+          <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-2 flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-gold" />
+            Already scheduled
+          </div>
+          <div className="space-y-2">
+            {slots
+              .slice()
+              .sort((a, b) => a.startTime.localeCompare(b.startTime))
+              .map((s, i) => (
+                <ScheduledSlotCard key={`${s.startTime}-${i}`} slot={s} />
+              ))}
+          </div>
+        </section>
+      )}
+
+      {/* Open-all-day banner for green days */}
+      {isOpen && (
+        <section className="rounded-2xl border border-emerald/30 bg-emerald/5 p-4">
+          <div className="font-medium text-emerald">Open all day</div>
+          <div className="text-[12px] text-ink-dim mt-0.5">No bookings yet on this date.</div>
+        </section>
+      )}
+
+      {/* Available windows — gaps between existing slots */}
+      {windows.length > 0 && slots.length > 0 && (
+        <section>
+          <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-2 flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-gold" />
+            Available windows
+          </div>
+          <div className="space-y-2">
+            {windows.map((w, i) => (
+              <button
+                key={`${w.startTime}-${i}`}
+                type="button"
+                onClick={() => onArrivalChange(w.startTime)}
+                className={`w-full text-left rounded-2xl border px-4 py-3 transition-colors ${
+                  arrivalTime === w.startTime
+                    ? "border-gold bg-gradient-to-br from-gold/10 to-transparent"
+                    : "border-border bg-surface/40 hover:border-gold/40"
+                }`}
+              >
+                <div className="font-medium text-sm">{w.label}</div>
+                <div className="text-[12px] text-ink-dim mt-0.5">{w.subLabel}</div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Arrival time + duration */}
+      <section>
+        <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-3 flex items-center gap-1.5">
+          <span className="w-1 h-1 rounded-full bg-gold" />
+          Your arrival time
+        </div>
+        <div className="rounded-2xl border border-border bg-surface/40 p-4">
+          <label className="block">
+            <span className="text-[10px] uppercase tracking-widest text-ink-dim block mb-1.5">Artist should arrive at</span>
+            <input
+              type="time"
+              value={arrivalTime ?? ""}
+              onChange={(e) => onArrivalChange(e.target.value)}
+              step={300}
+              className="w-full text-2xl font-display bg-transparent border-0 focus:outline-none text-gold py-1"
+            />
+            {arrivalTime && (
+              <div className="text-sm text-ink-dim mt-1">{formatTime(arrivalTime)}</div>
+            )}
+          </label>
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            {DURATION_PRESETS.map((p) => {
+              const active = durationMinutes === p.minutes;
+              return (
+                <button
+                  key={p.minutes}
+                  type="button"
+                  onClick={() => onDurationChange(p.minutes)}
+                  className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
+                    active
+                      ? "border-gold bg-gradient-to-br from-gold/15 to-transparent text-ink"
+                      : "border-border bg-surface/50 text-ink-dim hover:border-gold/40"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <p className="text-[11px] text-ink-dim leading-relaxed">
+        Requests are subject to artist confirmation. Timing will be finalised after discussion.
+      </p>
+    </>
+  );
+}
+
+function ScheduledSlotCard({ slot }: { slot: import("@/lib/availability").ScheduledSlot }) {
+  const tone =
+    slot.kind === "confirmed"
+      ? "border-emerald/40 bg-emerald/5"
+      : slot.kind === "tentative"
+        ? "border-gold/40 bg-gold/5"
+        : "border-border bg-surface/40";
+  const dotTone =
+    slot.kind === "confirmed" ? "bg-emerald" : slot.kind === "tentative" ? "bg-gold" : "bg-ink-dim";
+  const subline =
+    slot.kind === "confirmed"
+      ? "Confirmed booking"
+      : slot.kind === "tentative"
+        ? "Tentatively held · end time to be confirmed"
+        : "Artist scheduled";
+  return (
+    <div className={`rounded-2xl border px-4 py-3 ${tone}`}>
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <span className={`w-1.5 h-1.5 rounded-full ${dotTone}`} />
+        {formatRange(slot.startTime, slot.endTime)}
+      </div>
+      <div className="text-[12px] text-ink-dim mt-0.5 ml-3.5">{subline}</div>
     </div>
   );
 }

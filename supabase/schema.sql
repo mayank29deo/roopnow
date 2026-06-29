@@ -142,6 +142,18 @@ alter table public.bookings add column if not exists event_name text;
 alter table public.bookings add column if not exists budget int;
 alter table public.bookings add column if not exists customer_phone text;
 alter table public.bookings add column if not exists rejection_reason text;
+
+-- 24-Jun tracker item 2: customer specifies how many people the
+-- service will be performed on (e.g. bride + 4 family members).
+-- Nullable since older bookings won't have it and it's optional.
+alter table public.bookings add column if not exists party_size int;
+
+-- 28-Jun tracker item 7 (calendar redesign): the booking flow now
+-- collects a customer-chosen arrival time + total duration so the
+-- artist can see exactly how their day stacks up. duration_minutes
+-- overrides service.duration when present; null falls back to the
+-- service's default duration.
+alter table public.bookings add column if not exists duration_minutes int;
 alter table public.bookings drop constraint if exists bookings_status_check;
 alter table public.bookings add constraint bookings_status_check
   check (status in ('pending','accepted','rejected','cancelled','completed'));
