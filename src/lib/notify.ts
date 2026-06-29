@@ -83,8 +83,28 @@ function istTimestamp(d: Date = new Date()): string {
 // ============================================================
 type Cta = { label: string; url: string; primary?: boolean };
 
+// 25-Jun iteration: customer-facing Confirmed / Rejected emails now
+// use a *framed* layout — Suraksha wants the whole branded moment
+// (title, intro, CTA, signoff, with-love, logo, tagline) to land
+// INSIDE the cream parchment frame of confirmed.jpg, so the email
+// reads like a printed card. The links bar / disclaimer stays below
+// the image on dark wine.
+//
+// To enable: pass `framedContent: true` instead of `hero` and the
+// template image at HERO.confirmed (or an override) becomes a CSS
+// background on a single tall cell with the content overlaid via
+// padding tuned to the visible frame interior.
+//
+// The image is 600×1067 once rendered (native 675×1200, scaled).
+// Frame interior (where text can land):
+//   • top ≈ 285px (just below wax seal)
+//   • side ≈ 70px
+//   • bottom ≈ 80px
+//   → usable area ≈ 460×700px
 function brandedEmail(opts: {
   hero?: { src: string; alt?: string };
+  framedContent?: boolean;  // 25-Jun: text-on-parchment customer template
+  framedSrc?: string;       // override the framed bg image (defaults to HERO.confirmed)
   preheader?: string;       // hidden inbox-preview text
   title?: string;           // serif headline
   titleAccent?: string;     // italic gold accent on its own line
@@ -93,6 +113,138 @@ function brandedEmail(opts: {
   ctas?: Cta[];
   signoff?: string;         // overrides the italic tagline above the footer
 }): string {
+  const preheaderHtml = opts.preheader
+    ? `<div style="display:none;font-size:1px;color:#1A0710;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${opts.preheader}</div>`
+    : "";
+
+  const signoff = opts.signoff ?? "Here for every kind of beautiful moment.";
+
+  // ─── Framed customer template (parchment-inside-frame) ──────
+  if (opts.framedContent) {
+    const frameSrc = opts.framedSrc ?? HERO.confirmed;
+    // Dark wine ink reads cleanly on the cream parchment. Gold is
+    // reserved for the CTA button so the text stays calm and luxe.
+    const INK = "#4A0E1E";
+    const INK_SOFT = "#6B1E2E";
+    const ACCENT = "#8B6914";
+
+    const accent = opts.titleAccent
+      ? `<br/><span style="font-style:italic;color:${ACCENT};font-weight:500;">${opts.titleAccent}</span>`
+      : "";
+
+    const ctasInside = opts.ctas?.length
+      ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:18px auto 0;"><tr>
+          ${opts.ctas
+            .map((cta) => {
+              const style = cta.primary !== false
+                ? "padding:13px 28px;background:linear-gradient(135deg,#E8B86D,#A8875E);color:#1A0710;font-weight:600;"
+                : `padding:12px 26px;border:1px solid ${INK_SOFT};color:${INK};`;
+              return `<td style="padding:0 4px;">
+                <a href="${cta.url}" style="display:inline-block;${style}text-decoration:none;border-radius:999px;font-size:13px;font-family:Arial,Helvetica,sans-serif;">${cta.label}</a>
+              </td>`;
+            })
+            .join("")}
+        </tr></table>`
+      : "";
+
+    const introInside = opts.intro
+      ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;color:${INK};margin:14px 0 0;">${opts.intro}</p>`
+      : "";
+
+    const bodyInside = opts.body
+      ? `<div style="font-family:Arial,Helvetica,sans-serif;color:${INK};font-size:13px;line-height:1.7;margin-top:12px;">${opts.body}</div>`
+      : "";
+
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Roop</title>
+  </head>
+  <body style="margin:0;padding:0;background:#1A0710;">
+    ${preheaderHtml}
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#1A0710;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;background:#2A0D18;border:1px solid rgba(201,169,126,0.22);border-radius:24px;overflow:hidden;">
+
+            <tr><td style="height:4px;background:linear-gradient(90deg,#E8B86D,#D4B586,#A8875E);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+            <!-- Framed parchment cell — bg image + overlaid text -->
+            <tr>
+              <td
+                width="600"
+                height="1067"
+                valign="top"
+                align="center"
+                bgcolor="#F5E9D7"
+                background="${frameSrc}"
+                style="background-image:url('${frameSrc}');background-color:#F5E9D7;background-repeat:no-repeat;background-position:top center;background-size:600px 1067px;width:600px;height:1067px;mso-line-height-rule:exactly;"
+              >
+                <!--[if mso]>
+                <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:1067px;">
+                  <v:fill type="frame" src="${frameSrc}" color="#F5E9D7" />
+                  <v:textbox inset="0,0,0,0">
+                <![endif]-->
+
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;">
+                  <tr>
+                    <td align="center" valign="top" style="padding:285px 70px 0;">
+                      ${opts.title ? `<h1 style="font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;color:${INK};margin:0;font-weight:500;letter-spacing:0.01em;">${opts.title}${accent}</h1>` : ""}
+                      ${introInside}
+                      ${bodyInside}
+                      ${ctasInside}
+
+                      <!-- Decorative divider + signoff/with-love/logo/tagline, all inside the frame -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:24px auto 0;">
+                        <tr>
+                          <td style="width:40px;height:1px;background:${INK_SOFT};opacity:0.4;font-size:0;line-height:0;">&nbsp;</td>
+                          <td style="padding:0 12px;color:${ACCENT};font-size:13px;font-family:Georgia,serif;line-height:1;">·&nbsp;&#10022;&nbsp;·</td>
+                          <td style="width:40px;height:1px;background:${INK_SOFT};opacity:0.4;font-size:0;line-height:0;">&nbsp;</td>
+                        </tr>
+                      </table>
+
+                      <p style="font-family:'Playfair Display',Georgia,serif;font-size:16px;font-style:italic;color:${INK};margin:14px 0 0;line-height:1.4;">${signoff}</p>
+
+                      <p style="font-family:Arial,Helvetica,sans-serif;font-size:9px;letter-spacing:0.32em;color:${INK_SOFT};margin:12px 0 0;text-transform:uppercase;">With Love, The Roop Team</p>
+
+                      <p style="margin:14px 0 0;">
+                        <span style="display:inline-block;font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:700;letter-spacing:0.12em;color:${INK};">ROOP</span>
+                      </p>
+
+                      <p style="font-family:Arial,Helvetica,sans-serif;font-size:8px;letter-spacing:0.3em;color:${INK_SOFT};margin:6px 0 0;text-transform:uppercase;">Where Creation Meets the Moment</p>
+                    </td>
+                  </tr>
+                </table>
+
+                <!--[if mso]></v:textbox></v:rect><![endif]-->
+              </td>
+            </tr>
+
+            <!-- Bottom links bar stays on dark wine — disclaimer + utility links -->
+            <tr>
+              <td style="padding:20px 40px 24px;border-top:1px solid rgba(201,169,126,0.12);background:rgba(26,7,16,0.45);">
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#C9A97E;margin:0;line-height:1.6;text-align:center;">
+                  <a href="${SITE_URL}" style="color:#C9A97E;text-decoration:none;">roopnow.com</a>
+                  &nbsp;&middot;&nbsp;
+                  <a href="https://www.instagram.com/roop.now" style="color:#C9A97E;text-decoration:none;">Instagram</a>
+                  &nbsp;&middot;&nbsp;
+                  <a href="mailto:hello@roopnow.com" style="color:#C9A97E;text-decoration:none;">Support</a>
+                </p>
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#8A6D5C;margin:8px 0 0;text-align:center;">You received this because you joined Roop.</p>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+  }
+
+  // ─── Default branded shell (hero-above-text) ────────────────
   const heroHtml = opts.hero
     ? `
       <tr>
@@ -100,10 +252,6 @@ function brandedEmail(opts: {
           <img src="${opts.hero.src}" alt="${opts.hero.alt ?? ""}" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;" />
         </td>
       </tr>`
-    : "";
-
-  const preheaderHtml = opts.preheader
-    ? `<div style="display:none;font-size:1px;color:#1A0710;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${opts.preheader}</div>`
     : "";
 
   const accent = opts.titleAccent
@@ -152,8 +300,6 @@ function brandedEmail(opts: {
         </td>
       </tr>`
     : "";
-
-  const signoff = opts.signoff ?? "Here for every kind of beautiful moment.";
 
   return `<!DOCTYPE html>
 <html>
@@ -401,10 +547,13 @@ export async function notifyBookingDecided(
         to: customerEmail,
         subject: "Your artist said yes ✦",
         html: brandedEmail({
-          hero: { src: HERO.confirmed, alt: "Confirmed" },
+          // 25-Jun: customer confirmed email lays its text inside the
+          // cream parchment frame of confirmed.jpg. See brandedEmail()
+          // framedContent block for the layout reasoning.
+          framedContent: true,
           preheader: `${artistName} has confirmed your booking.`,
           title: `${customerFirst}.`,
-          intro: `It&rsquo;s happening. Your artist has <strong>confirmed</strong> your booking.<br/><br/>They&rsquo;ll reach out to you directly &mdash; expect a message soon to sort the details, prep, and payments.<br/><br/><em>The glam is officially on.</em>`,
+          intro: `It&rsquo;s happening. Your artist has <strong>confirmed</strong> your booking.<br/><br/>They&rsquo;ll reach out directly &mdash; expect a message soon to sort details, prep, and payments.<br/><br/><em>The glam is officially on.</em>`,
           ctas: [{ label: "View booking", url: `${SITE_URL}/dashboard`, primary: true }],
         }),
       });
@@ -426,18 +575,23 @@ export async function notifyBookingDecided(
     }
   } else {
     if (customerEmail) {
+      // Rejection reason is shown inline on cream — dark wine-tinted
+      // quote box so it stays readable against the parchment bg.
       const reasonBlock = reason
-        ? `<div style="background:rgba(201,169,126,0.08);border:1px solid rgba(201,169,126,0.2);border-radius:12px;padding:14px 16px;font-style:italic;margin:14px 0;">&ldquo;${reason}&rdquo;</div>`
+        ? `<div style="background:rgba(74,14,30,0.06);border:1px solid rgba(74,14,30,0.18);border-radius:12px;padding:12px 14px;font-style:italic;margin:12px 0;color:#4A0E1E;">&ldquo;${reason}&rdquo;</div>`
         : "";
       await send({
         to: customerEmail,
         subject: "About your recent booking request.",
         html: brandedEmail({
-          hero: { src: HERO.confirmed, alt: "Update on your request" },
+          // 25-Jun: same framed-parchment treatment as the accept path
+          // — rejection lands on the cream card too so the brand
+          // moment is consistent.
+          framedContent: true,
           preheader: `${artistName} couldn't take this booking — find another artist.`,
           title: `Hey, ${customerFirst}.`,
           intro: `Not this time &mdash; but don&rsquo;t worry. Your artist couldn&rsquo;t take this booking.`,
-          body: `${reason ? `Here&rsquo;s what they said:${reasonBlock}` : ""}<p style="margin:0;">There are incredible artists on ROOP who would love to work with you.</p><p style="margin:12px 0 0;font-style:italic;color:#E8B86D;">Your moment isn&rsquo;t cancelled. Just redirected.</p>`,
+          body: `${reason ? `Here&rsquo;s what they said:${reasonBlock}` : ""}<p style="margin:0;">There are incredible artists on ROOP who would love to work with you.</p><p style="margin:10px 0 0;font-style:italic;color:#8B6914;">Your moment isn&rsquo;t cancelled. Just redirected.</p>`,
           ctas: [{ label: "Find your artist", url: `${SITE_URL}/discover`, primary: true }],
         }),
       });
