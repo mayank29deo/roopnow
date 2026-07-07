@@ -105,17 +105,10 @@ export function AuthForm({
             Join thousands booking India&apos;s most talented makeup Artists, hairstylists, and beauty
             professionals — all in one curated space.
           </p>
-          <div className="flex items-center gap-4 pt-4">
-            <div className="flex -space-x-3">
-              {["https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop","https://images.unsplash.com/photo-1517841905240-472988babdf9?w=80&h=80&fit=crop","https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop","https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop"].map((src,i) => (
-                <img key={i} src={src} alt="" className="w-10 h-10 rounded-full border-2 border-bg object-cover" />
-              ))}
-            </div>
-            <div>
-              <div className="text-sm font-semibold">10,000+ clients</div>
-              <div className="text-xs text-ink-dim">trust Roop</div>
-            </div>
-          </div>
+          {/* 29-Jun tracker item 2: "10,000+ clients trust Roop" chip
+              (with the 4 stock avatars) was pre-launch placeholder
+              social proof. Removed per Suraksha — restore only if we
+              have real numbers to back it. */}
         </div>
 
         <div className="relative z-10 text-xs text-ink-dim">
