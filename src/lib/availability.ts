@@ -55,6 +55,9 @@ export type AvailabilityInput = {
   eventsByDay: Record<string, number>;     // count of artist-scheduled events
   blockedDays: Set<string>;                // dates the artist explicitly blocked
   slotsByDay: Record<string, ScheduledSlot[]>; // 28-Jun: per-day slot ranges
+  // 7-Jul item 8: reason the artist gave when explicitly blocking a
+  // date. Surfaced on the customer picker when they tap a red date.
+  blockedReasonByDay?: Record<string, string | null>;
   fullDayLimit: number;                    // artist's max_bookings_per_day
 };
 
@@ -193,7 +196,7 @@ export function buildAvailability(
     start_time?: string | null;
     end_time?: string | null;
   }[],
-  blocks: { blocked_date: string }[],
+  blocks: { blocked_date: string; reason?: string | null }[],
   fullDayLimit: number = DEFAULT_FULL_DAY_LIMIT,
 ): AvailabilityInput {
   const bookingsByDay: Record<string, number> = {};
@@ -231,10 +234,15 @@ export function buildAvailability(
     }
   }
   const blockedDays = new Set(blocks.map((b) => b.blocked_date));
+  const blockedReasonByDay: Record<string, string | null> = {};
+  for (const b of blocks) {
+    blockedReasonByDay[b.blocked_date] = b.reason ?? null;
+  }
   return {
     bookingsByDay,
     eventsByDay,
     blockedDays,
+    blockedReasonByDay,
     slotsByDay,
     fullDayLimit: Math.max(1, fullDayLimit),
   };

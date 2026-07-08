@@ -69,7 +69,7 @@ export default async function ArtistDashboard() {
       services: b.services ? { duration: b.services.duration } : null,
     })),
     events.map((e) => ({ event_date: e.event_date, start_time: e.start_time, end_time: e.end_time })),
-    blocks.map((b) => ({ blocked_date: b.blocked_date })),
+    blocks.map((b) => ({ blocked_date: b.blocked_date, reason: b.reason })),
     artistRow.max_bookings_per_day ?? undefined,
   );
 
@@ -110,6 +110,8 @@ export default async function ArtistDashboard() {
     cancellationPolicy: artistRow.cancellation_policy ?? "",
     agreedToTerms: artistRow.agreed_to_terms ?? false,
     skinToneExpertise: artistRow.skin_tone_expertise ?? "",
+    trialServiceOffered: artistRow.trial_service_offered ?? false,
+    trialServiceDescription: artistRow.trial_service_description ?? "",
   };
 
   return (

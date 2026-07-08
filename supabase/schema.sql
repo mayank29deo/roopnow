@@ -154,6 +154,13 @@ alter table public.bookings add column if not exists party_size int;
 -- overrides service.duration when present; null falls back to the
 -- service's default duration.
 alter table public.bookings add column if not exists duration_minutes int;
+
+-- 7-Jul tracker item 3: artist-level trial-service policy. Y/N flag
+-- + freeform description surfaces once at the top of the Service
+-- Menu tab (per-service `trial_makeup_available` still exists for
+-- granularity).
+alter table public.artists add column if not exists trial_service_offered boolean not null default false;
+alter table public.artists add column if not exists trial_service_description text not null default '';
 alter table public.bookings drop constraint if exists bookings_status_check;
 alter table public.bookings add constraint bookings_status_check
   check (status in ('pending','accepted','rejected','cancelled','completed'));

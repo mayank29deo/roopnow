@@ -42,6 +42,9 @@ type Artist = {
   upiId: string; bankAccountName: string; bankIfsc: string; bankAccountNo: string;
   cancellationPolicy: string; agreedToTerms: boolean;
   skinToneExpertise: string;
+  // 7-Jul tracker item 3: artist-level trial-service policy.
+  trialServiceOffered: boolean;
+  trialServiceDescription: string;
 };
 
 const SKIN_TONE_OPTIONS = [
@@ -182,7 +185,7 @@ export function ArtistDashboardClient({
               key="calendar" availability={availability} blockedDates={blockedDates} events={events}
             />
           )}
-          {tab === "services" && <ServicesTab key="services" services={services} additionalCharges={additionalCharges} artistId={artist.id} />}
+          {tab === "services" && <ServicesTab key="services" services={services} additionalCharges={additionalCharges} artistId={artist.id} artist={artist} />}
           {tab === "portfolio" && <PortfolioTab key="portfolio" portfolio={portfolio} artistId={artist.id} userId={userId} />}
           {tab === "profile" && <ProfileTab key="profile" artist={artist} userId={userId} />}
           {tab === "payments" && <PaymentsTab key="payments" subscriptions={subscriptions} artistId={artist.id} />}
@@ -687,10 +690,12 @@ function ServicesTab({
   services: initialServices,
   additionalCharges: initialCharges,
   artistId,
+  artist,
 }: {
   services: Service[];
   additionalCharges: AdditionalCharge[];
   artistId: string;
+  artist: Artist;
 }) {
   const router = useRouter();
   const [sub, setSub] = useState<ServicesSubTab>("menu");
@@ -730,12 +735,16 @@ function ServicesTab({
 
       {sub === "menu" && (
         <>
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-4">
             <p className="text-ink-dim text-sm">Services appear on your public profile for clients to book.</p>
             <button onClick={() => setEditingService("new")} className="btn-primary">
               <Plus size={16} /> Add service
             </button>
           </div>
+
+          {/* 7-Jul tracker item 3: artist-level trial-service policy. */}
+          <TrialServicePolicyCard artist={artist} />
+
           {services.length === 0 ? (
             <div className="py-16 text-center border border-dashed border-border rounded-3xl">
               <p className="font-display text-2xl mb-2">No services yet</p>
@@ -836,6 +845,111 @@ function SubTabButton({ active, onClick, children }: { active: boolean; onClick:
     >
       {children}
     </button>
+  );
+}
+
+// 7-Jul tracker item 3: artist-level trial-service policy card.
+// Sits right below the "Services appear on your public profile"
+// header on the Service Menu sub-tab. Saves via PATCH /api/artist,
+// same route the Profile tab uses.
+function TrialServicePolicyCard({ artist }: { artist: Artist }) {
+  const router = useRouter();
+  const [offered, setOffered] = useState(artist.trialServiceOffered);
+  const [description, setDescription] = useState(artist.trialServiceDescription);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const dirty =
+    offered !== artist.trialServiceOffered ||
+    description !== artist.trialServiceDescription;
+
+  async function save() {
+    setSaving(true); setError(null); setSaved(false);
+    try {
+      const res = await fetch("/api/artist", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        // We echo back the whole artist so the PATCH doesn't
+        // accidentally null out other columns that the whitelist
+        // still writes. The route only touches whitelisted fields.
+        body: JSON.stringify({
+          ...artist,
+          trialServiceOffered: offered,
+          trialServiceDescription: description,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      setSaved(true);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-3xl border border-border bg-surface/40 p-5 lg:p-6 mb-6">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-10 h-10 rounded-2xl bg-gold/10 border border-gold/25 text-gold flex items-center justify-center shrink-0">
+          <Sparkles size={17} />
+        </div>
+        <div>
+          <div className="font-display text-xl leading-tight">Do you offer a trial service?</div>
+          <p className="text-xs text-ink-dim mt-1">Shown once at the top of your services so clients know your general policy.</p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        {[
+          { value: true, label: "Yes" },
+          { value: false, label: "No" },
+        ].map((opt) => {
+          const active = offered === opt.value;
+          return (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => setOffered(opt.value)}
+              className={`flex-1 rounded-2xl border px-4 py-2.5 text-sm font-medium transition-colors ${
+                active
+                  ? "border-gold bg-gradient-to-br from-gold/20 to-amber/10 text-ink"
+                  : "border-border bg-surface/40 hover:border-gold/40 text-ink-dim"
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {offered && (
+        <label className="block mb-4">
+          <span className="text-[10px] uppercase tracking-widest text-ink-dim mb-2 block">Description of the trial service</span>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            placeholder="e.g. 1-hour trial makeup + hair at the studio 2 weeks before the event. Trial fee is adjusted against the final booking."
+            className="dash-input resize-none w-full"
+          />
+        </label>
+      )}
+
+      <div className="flex items-center justify-end gap-3">
+        {saved && !dirty && <span className="text-xs text-emerald">Saved</span>}
+        {error && <span className="text-xs text-rose">{error}</span>}
+        <button
+          onClick={save}
+          disabled={!dirty || saving}
+          className="btn-primary text-sm py-2 px-4 disabled:opacity-50"
+        >
+          {saving ? <Loader2 className="animate-spin" size={14} /> : <><Check size={14} /> Save</>}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -946,7 +1060,28 @@ function ServiceEditor({ initial, artistId, onClose, onSaved }: {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
-      onSaved(data.service);
+      // 7-Jul tracker item 2: the API returns the raw DB row with
+      // snake_case columns. Local Service type is camelCase, so a
+      // direct pass-through left trialMakeupAvailable undefined on
+      // the freshly saved row — the "Yes" toggle then rendered as
+      // "No" until a full page refresh. Map the returned row here.
+      const raw = data.service as {
+        id: string; name: string; description: string;
+        inclusions: string; exclusions: string;
+        trial_makeup_available: boolean;
+        duration: number; price: number; category: string;
+      };
+      onSaved({
+        id: raw.id,
+        name: raw.name,
+        description: raw.description,
+        inclusions: raw.inclusions,
+        exclusions: raw.exclusions,
+        trialMakeupAvailable: !!raw.trial_makeup_available,
+        duration: raw.duration,
+        price: raw.price,
+        category: raw.category,
+      });
     } catch (e) { setErr(e instanceof Error ? e.message : "Something went wrong"); }
     finally { setLoading(false); }
   }

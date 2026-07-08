@@ -36,6 +36,8 @@ type Artist = {
   paymentModes: string;
   invoiceAvailable: boolean;
   paymentNotes: string;
+  trialServiceOffered: boolean;
+  trialServiceDescription: string;
   yearsExp: number;
   instagram: string | null;
   verified: boolean;
@@ -247,6 +249,21 @@ export function ArtistProfile({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
               >
+                {/* 7-Jul tracker item 3: artist-level trial policy sits
+                    above the service grid so the customer sees it once. */}
+                {artist.trialServiceOffered && (
+                  <div className="mb-8 rounded-3xl border border-emerald/30 bg-emerald/5 p-5 lg:p-6">
+                    <div className="flex items-center gap-2 mb-2 text-emerald">
+                      <Sparkles size={14} />
+                      <span className="text-[11px] uppercase tracking-widest font-semibold">Trial service available</span>
+                    </div>
+                    {artist.trialServiceDescription ? (
+                      <p className="text-ink text-sm leading-relaxed whitespace-pre-wrap">{artist.trialServiceDescription}</p>
+                    ) : (
+                      <p className="text-ink-dim text-sm">Trial makeup can be arranged on request. Ask the artist for details.</p>
+                    )}
+                  </div>
+                )}
                 <div className="grid md:grid-cols-2 gap-4">
                   {artist.services.map((s) => {
                     const inclusions = s.inclusions.split("\n").map((x) => x.trim()).filter(Boolean);

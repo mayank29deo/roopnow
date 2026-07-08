@@ -24,6 +24,8 @@ type RawArtistWithRelations = {
   payment_modes?: string;
   invoice_available?: boolean;
   payment_notes?: string;
+  trial_service_offered?: boolean;
+  trial_service_description?: string;
   years_exp?: number;
   instagram?: string | null;
   verified: boolean;
@@ -93,6 +95,8 @@ export function toProfileArtist(a: RawArtistWithRelations) {
     paymentModes: a.payment_modes ?? "",
     invoiceAvailable: a.invoice_available ?? false,
     paymentNotes: a.payment_notes ?? "",
+    trialServiceOffered: a.trial_service_offered ?? false,
+    trialServiceDescription: a.trial_service_description ?? "",
     yearsExp: a.years_exp ?? 0,
     instagram: a.instagram ?? null,
     verified: a.verified,

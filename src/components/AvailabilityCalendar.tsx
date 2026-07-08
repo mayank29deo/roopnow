@@ -81,7 +81,10 @@ export function AvailabilityCalendar({ availability, value, onPick, min, compact
             const inMonth = isSameMonth(d, cursor);
             const past = isBefore(d, minDay);
             const selected = value && isSameDay(d, value);
-            const disabled = past || !inMonth || status === "red";
+            // 7-Jul item 8: red dates are now tappable so the customer
+            // can read the "why" panel below. Only past dates and
+            // out-of-month days stay hard-disabled.
+            const disabled = past || !inMonth;
 
             const color =
               status === "red"

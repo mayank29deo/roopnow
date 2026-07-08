@@ -46,6 +46,9 @@ export async function PATCH(req: NextRequest) {
       cancellation_policy: body.cancellationPolicy ?? "",
       agreed_to_terms: !!body.agreedToTerms,
       skin_tone_expertise: body.skinToneExpertise ?? "",
+      // 7-Jul tracker item 3: artist-level trial service policy.
+      trial_service_offered: !!body.trialServiceOffered,
+      trial_service_description: body.trialServiceDescription ?? "",
     })
     .eq("id", user.artistId)
     .select()

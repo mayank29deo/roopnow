@@ -94,13 +94,13 @@ export default function ForArtistsPage() {
             <div className="absolute inset-0 bg-mesh opacity-40 pointer-events-none" />
             <div className="relative">
               <div className="chip mx-auto mb-6"><Sparkles size={12} className="text-gold" /> Ready to launch?</div>
-              <h2 className="font-display text-5xl lg:text-6xl mb-4">
+              <h2 className="font-display text-5xl lg:text-6xl mb-8">
                 Create your Artist profile<br />
                 <span className="italic text-gradient-primary">in seconds.</span>
               </h2>
-              <p className="text-ink-dim mb-8 max-w-lg mx-auto">
-                Free to join. Free to list. Only pay a small fee when you get paid.
-              </p>
+              {/* 7-Jul tracker item 1: "Free to join. Free to list…" subhead
+                  removed per Suraksha — pricing story is told on the payments
+                  section instead, no need for it on the CTA card. */}
               <Link href="/signup?role=artist" className="btn-primary shine inline-flex">
                 Join Roop <ArrowRight size={16} />
               </Link>

@@ -12,12 +12,16 @@ import { format } from "date-fns";
 import { AvailabilityCalendar } from "./AvailabilityCalendar";
 import {
   type AvailabilityInput,
-  availableWindows,
   formatRange,
   formatTime,
   isoDay,
-  DURATION_PRESETS,
 } from "@/lib/availability";
+
+// 7-Jul tracker item 4: customer no longer picks a duration — the
+// artist confirms it after discussion. We block 4 hrs from the
+// arrival time by default so the slot doesn't stay open for
+// double-booking.
+const DEFAULT_DURATION_MINUTES = 240;
 
 type Service = {
   id: string; name: string;
@@ -50,10 +54,9 @@ export function BookingDrawer({
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [date, setDate] = useState<Date | null>(initialDate ?? null);
   // 28-Jun calendar redesign: fixed slot grid replaced with a free-form
-  // arrival time + duration preset. `slot` is the arrival time "HH:MM";
-  // `durationMinutes` is the customer-chosen total time block.
+  // arrival time. `slot` is the arrival time "HH:MM". The 4-hr default
+  // block is applied server-side (7-Jul item 4).
   const [slot, setSlot] = useState<string | null>(null);
-  const [durationMinutes, setDurationMinutes] = useState<number>(DURATION_PRESETS[1].minutes);
   // Ref on the slot-picker block so we can scroll it into view the
   // moment a date is picked — drawer content is taller than most
   // viewports, the picker rendered below the calendar would otherwise
@@ -80,7 +83,6 @@ export function BookingDrawer({
     setStep(1);
     setDate(null);
     setSlot(null);
-    setDurationMinutes(DURATION_PRESETS[1].minutes);
     setEventName("");
     setPartySize("");
     setAddress("");
@@ -103,7 +105,7 @@ export function BookingDrawer({
           serviceId: service.id,
           date: date.toISOString(),
           arrivalTime: slot,
-          durationMinutes,
+          durationMinutes: DEFAULT_DURATION_MINUTES,
           eventName,
           partySize: partySize ? Number(partySize) : undefined,
           address,
@@ -122,8 +124,18 @@ export function BookingDrawer({
     }
   }
 
+  // 7-Jul item 5: partySize is stored as a string for input-controlled
+  // state; number below drives price math + submission.
+  const partySizeNum = Math.max(1, partySize ? Number(partySize) : 1);
   const open = service !== null;
-  const canContinueStep2 = date && slot;
+  // 7-Jul item 8: red dates are tappable so the customer can read the
+  // "why" panel, but they can't proceed from that state — Continue
+  // stays disabled until they pick a green/yellow day + arrival time.
+  const pickedDateBlocked = !!date && (
+    availability.blockedDays.has(isoDay(date)) ||
+    (availability.bookingsByDay[isoDay(date)] ?? 0) + (availability.eventsByDay[isoDay(date)] ?? 0) >= availability.fullDayLimit
+  );
+  const canContinueStep2 = !!date && !!slot && !pickedDateBlocked;
   const canSubmit = !!(address && eventName && phone);
 
   return (
@@ -249,8 +261,6 @@ export function BookingDrawer({
                         availability={availability}
                         arrivalTime={slot}
                         onArrivalChange={setSlot}
-                        durationMinutes={durationMinutes}
-                        onDurationChange={setDurationMinutes}
                       />
                     </motion.div>
                   )}
@@ -334,9 +344,15 @@ export function BookingDrawer({
                       <Row label="Service" value={service.name} />
                       <Row label="Date" value={date ? formatDateLong(date) : "—"} />
                       <Row label="Arrival" value={slot ? formatTime(slot) : "—"} />
-                      <Row label="Duration" value={formatDuration(durationMinutes)} />
+                      {/* 7-Jul item 5: quote is service price × head count.
+                          The row appears only when a party size has been
+                          entered so a bride booking for herself doesn't see
+                          "× 1 person" noise. */}
+                      {partySizeNum > 1 && (
+                        <Row label="People" value={`${partySizeNum} × ${formatPrice(service.price)} per person`} />
+                      )}
                       <div className="h-px bg-border my-2" />
-                      <Row label="Quoted price" value={formatPrice(service.price)} big />
+                      <Row label="Quoted price" value={formatPrice(service.price * partySizeNum)} big />
                     </div>
                   </div>
 
@@ -421,14 +437,6 @@ export function BookingDrawer({
   );
 }
 
-function formatDuration(minutes: number): string {
-  const preset = DURATION_PRESETS.find((p) => p.minutes === minutes);
-  if (preset) return preset.label;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `~${h} hrs` : `~${h}h ${m}m`;
-}
-
 function Row({ label, value, big }: { label: string; value: string; big?: boolean }) {
   return (
     <div className="flex items-center justify-between">
@@ -438,25 +446,44 @@ function Row({ label, value, big }: { label: string; value: string; big?: boolea
   );
 }
 
-// 28-Jun calendar redesign — date-tapped picker. Shows existing
-// bookings on the day (so the customer can see what's locked), the
-// free windows between them, and a free-form arrival time + duration
-// preset. Replaces the old fixed-slot grid.
+// 28-Jun calendar redesign — date-tapped picker.
+// 7-Jul iteration:
+//   • Duration chips removed (item 4) — the artist confirms the actual
+//     time. Booking POST defaults duration_minutes to 240 (4 hrs) so
+//     the customer's slot blocks the next 4 hours from arrival until
+//     the artist confirms otherwise.
+//   • "Available windows" section removed (item 6) — self-evident that
+//     the rest of the day is free once the already-scheduled slots
+//     are visible.
+//   • Red-date tap now shows the block reason inline (item 8) via the
+//     RedDatePanel below.
 function DatePicker({
   date, availability, arrivalTime, onArrivalChange,
-  durationMinutes, onDurationChange,
 }: {
   date: Date;
   availability: AvailabilityInput;
   arrivalTime: string | null;
   onArrivalChange: (v: string) => void;
-  durationMinutes: number;
-  onDurationChange: (v: number) => void;
 }) {
   const dayKey = isoDay(date);
   const slots = availability.slotsByDay[dayKey] ?? [];
-  const windows = availableWindows(dayKey, availability);
   const isOpen = slots.length === 0;
+  const blockedReason = availability.blockedReasonByDay?.[dayKey];
+  const isUnavailable = availability.blockedDays.has(dayKey) ||
+    (availability.bookingsByDay[dayKey] ?? 0) + (availability.eventsByDay[dayKey] ?? 0) >= availability.fullDayLimit;
+
+  // 7-Jul item 8: red dates surface *why* they're red. Blocked with a
+  // reason from the artist wins over the generic "fully booked"
+  // message.
+  if (isUnavailable) {
+    return (
+      <RedDatePanel
+        date={date}
+        reason={blockedReason}
+        fullyBooked={!blockedReason && !availability.blockedDays.has(dayKey)}
+      />
+    );
+  }
 
   return (
     <>
@@ -495,34 +522,7 @@ function DatePicker({
         </section>
       )}
 
-      {/* Available windows — gaps between existing slots */}
-      {windows.length > 0 && slots.length > 0 && (
-        <section>
-          <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-2 flex items-center gap-1.5">
-            <span className="w-1 h-1 rounded-full bg-gold" />
-            Available windows
-          </div>
-          <div className="space-y-2">
-            {windows.map((w, i) => (
-              <button
-                key={`${w.startTime}-${i}`}
-                type="button"
-                onClick={() => onArrivalChange(w.startTime)}
-                className={`w-full text-left rounded-2xl border px-4 py-3 transition-colors ${
-                  arrivalTime === w.startTime
-                    ? "border-gold bg-gradient-to-br from-gold/10 to-transparent"
-                    : "border-border bg-surface/40 hover:border-gold/40"
-                }`}
-              >
-                <div className="font-medium text-sm">{w.label}</div>
-                <div className="text-[12px] text-ink-dim mt-0.5">{w.subLabel}</div>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Arrival time + duration */}
+      {/* Arrival time */}
       <section>
         <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-3 flex items-center gap-1.5">
           <span className="w-1 h-1 rounded-full bg-gold" />
@@ -542,25 +542,6 @@ function DatePicker({
               <div className="text-sm text-ink-dim mt-1">{formatTime(arrivalTime)}</div>
             )}
           </label>
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            {DURATION_PRESETS.map((p) => {
-              const active = durationMinutes === p.minutes;
-              return (
-                <button
-                  key={p.minutes}
-                  type="button"
-                  onClick={() => onDurationChange(p.minutes)}
-                  className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
-                    active
-                      ? "border-gold bg-gradient-to-br from-gold/15 to-transparent text-ink"
-                      : "border-border bg-surface/50 text-ink-dim hover:border-gold/40"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
         </div>
       </section>
 
@@ -568,6 +549,45 @@ function DatePicker({
         Requests are subject to artist confirmation. Timing will be finalised after discussion.
       </p>
     </>
+  );
+}
+
+// 7-Jul item 8: when the customer taps a red date on the calendar,
+// tell them *why* — either the artist explicitly blocked it (show
+// their reason if given) or it's booked to the day cap.
+function RedDatePanel({ date, reason, fullyBooked }: {
+  date: Date; reason?: string | null; fullyBooked: boolean;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-widest bg-rose/10 border border-rose/30 text-rose">
+        Unavailable · {format(date, "d MMM")}
+      </div>
+      <div className="rounded-2xl border border-rose/30 bg-rose/5 p-5">
+        {fullyBooked ? (
+          <>
+            <div className="font-medium text-rose mb-1">This day is fully booked.</div>
+            <div className="text-[13px] text-ink-dim leading-relaxed">
+              The artist has already accepted the maximum number of bookings for this date. Try another day.
+            </div>
+          </>
+        ) : reason ? (
+          <>
+            <div className="font-medium text-rose mb-1">The artist has blocked this date.</div>
+            <div className="text-[13px] text-ink-dim leading-relaxed italic">
+              &ldquo;{reason}&rdquo;
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="font-medium text-rose mb-1">The artist has blocked this date.</div>
+            <div className="text-[13px] text-ink-dim leading-relaxed">
+              No reason was provided. Please pick another day.
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -34,7 +34,7 @@ export default async function ArtistPage({
     start_time: string | null;
     end_time: string | null;
   }[] = [];
-  let blocks: { blocked_date: string }[] = [];
+  let blocks: { blocked_date: string; reason: string | null }[] = [];
   let additionalCharges: { id: string; name: string; description: string; sort_order: number }[] = [];
 
   try {
@@ -60,7 +60,7 @@ export default async function ArtistPage({
         .eq("artist_id", id),
       supabase
         .from("artist_blocked_dates")
-        .select("blocked_date")
+        .select("blocked_date, reason")
         .eq("artist_id", id),
       supabase
         .from("additional_charges")

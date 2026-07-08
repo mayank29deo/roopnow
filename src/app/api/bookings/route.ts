@@ -37,10 +37,51 @@ export async function POST(req: NextRequest) {
 
     const { data: service } = await supabase
       .from("services")
-      .select("price, name")
+      .select("price, name, duration")
       .eq("id", data.serviceId)
       .maybeSingle();
     if (!service) return NextResponse.json({ error: "Service not found" }, { status: 404 });
+
+    // 7-Jul tracker item 7: reject the request if the requested slot
+    // overlaps any active (pending or accepted) booking on the same
+    // date. We check the day window ± existing bookings' [start, end).
+    const newDurationMin = data.durationMinutes ?? 240;
+    const [arrH, arrM] = arrival.split(":").map((n) => parseInt(n, 10));
+    const newStart = arrH * 60 + arrM;
+    const newEnd = newStart + newDurationMin;
+    const dayStart = new Date(data.date); dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);
+    const { data: sameDay } = await supabase
+      .from("bookings")
+      .select("time_slot, duration_minutes, services(duration)")
+      .eq("artist_id", data.artistId)
+      .gte("date", dayStart.toISOString())
+      .lt("date", dayEnd.toISOString())
+      .in("status", ["pending", "accepted"]);
+    // The Supabase JS client types the foreign-key relation as
+    // `services: { duration }[]` even when the relationship is a
+    // to-one — go through unknown to grab the shape we actually
+    // read at runtime.
+    for (const b of (sameDay ?? []) as unknown as Array<{
+      time_slot: string | null;
+      duration_minutes: number | null;
+      services: { duration: number | null } | { duration: number | null }[] | null;
+    }>) {
+      if (!b.time_slot) continue;
+      const [bH, bM] = b.time_slot.split(":").map((n) => parseInt(n, 10));
+      const bStart = bH * 60 + bM;
+      const svc = Array.isArray(b.services) ? b.services[0] : b.services;
+      const bDur = b.duration_minutes ?? svc?.duration ?? 240;
+      const bEnd = bStart + bDur;
+      // Half-open overlap: [newStart, newEnd) ∩ [bStart, bEnd) is
+      // non-empty iff newStart < bEnd AND newEnd > bStart.
+      if (newStart < bEnd && newEnd > bStart) {
+        return NextResponse.json(
+          { error: "The artist has already been booked for this time slot. Please pick a different time." },
+          { status: 409 },
+        );
+      }
+    }
 
     const { data: booking, error } = await supabase
       .from("bookings")
@@ -50,8 +91,13 @@ export async function POST(req: NextRequest) {
         service_id: data.serviceId,
         date: data.date,
         time_slot: arrival,
-        duration_minutes: data.durationMinutes ?? null,
-        total_price: service.price,
+        // 7-Jul item 4: default 4-hour block if the client didn't send
+        // a duration — customer no longer picks it, artist confirms
+        // after discussion.
+        duration_minutes: data.durationMinutes ?? 240,
+        // 7-Jul item 5: quoted total = service.price × party size.
+        // partySize is nullable/optional; default to 1 head.
+        total_price: service.price * Math.max(1, data.partySize ?? 1),
         event_name: data.eventName,
         budget: data.budget ?? null,
         party_size: data.partySize ?? null,
