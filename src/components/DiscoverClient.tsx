@@ -35,14 +35,16 @@ export function DiscoverClient({ artists }: { artists: Artist[] }) {
   const [cat, setCat] = useState("All");
   const [city, setCity] = useState("All Cities");
   const [priceIdx, setPriceIdx] = useState(0);
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  // 8-Jul: /discover server query now filters by verified=true, so
+  // every artist reaching this component is already verified. The
+  // old "Verified only" client-side chip is gone — leaving it would
+  // read as a no-op filter.
 
   const filtered = useMemo(() => {
     return artists.filter((a) => {
       if (q && !(a.displayName.toLowerCase().includes(q.toLowerCase()) || a.specialties.toLowerCase().includes(q.toLowerCase()) || a.tagline.toLowerCase().includes(q.toLowerCase()))) return false;
       if (cat !== "All" && !a.specialties.toLowerCase().includes(cat.split(" ")[0].toLowerCase()) && !a.services.some(s => s.category === cat)) return false;
       if (city !== "All Cities" && a.city !== city) return false;
-      if (verifiedOnly && !a.verified) return false;
       const pr = priceRanges[priceIdx];
       if (pr.min > 0 || pr.max < 999999) {
         const minPrice = a.services.length > 0 ? Math.min(...a.services.map((s) => s.price)) : 0;
@@ -50,17 +52,16 @@ export function DiscoverClient({ artists }: { artists: Artist[] }) {
       }
       return true;
     });
-  }, [artists, q, cat, city, priceIdx, verifiedOnly]);
+  }, [artists, q, cat, city, priceIdx]);
 
   function reset() {
     setQ("");
     setCat("All");
     setCity("All Cities");
     setPriceIdx(0);
-    setVerifiedOnly(false);
   }
 
-  const hasFilters = q || cat !== "All" || city !== "All Cities" || priceIdx !== 0 || verifiedOnly;
+  const hasFilters = q || cat !== "All" || city !== "All Cities" || priceIdx !== 0;
 
   return (
     <>
@@ -143,15 +144,6 @@ export function DiscoverClient({ artists }: { artists: Artist[] }) {
             >
               {priceRanges.map((p, i) => <option key={p.label} value={i}>{p.label}</option>)}
             </select>
-            <label className="flex items-center gap-2 px-4 py-2 rounded-full text-sm bg-surface border border-border cursor-pointer hover:border-gold/40">
-              <input
-                type="checkbox"
-                checked={verifiedOnly}
-                onChange={(e) => setVerifiedOnly(e.target.checked)}
-                className="accent-gold"
-              />
-              Verified only
-            </label>
           </div>
         </div>
       </section>
