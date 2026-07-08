@@ -546,7 +546,7 @@ function DatePicker({
       </section>
 
       <p className="text-[11px] text-ink-dim leading-relaxed">
-        Requests are subject to artist confirmation. Timing will be finalised after discussion.
+        Requests are subject to artist confirmation.
       </p>
     </>
   );
