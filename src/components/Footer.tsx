@@ -25,7 +25,7 @@ export function Footer() {
               >
                 <Instagram size={16} />
               </a>
-              <a href="mailto:hello@roop.in" className="w-10 h-10 rounded-full bg-surface hover:bg-surface-2 border border-border flex items-center justify-center">
+              <a href="mailto:roopsupport@gmail.com" className="w-10 h-10 rounded-full bg-surface hover:bg-surface-2 border border-border flex items-center justify-center">
                 <Mail size={16} />
               </a>
             </div>
@@ -54,10 +54,10 @@ export function Footer() {
             <h4 className="text-xs uppercase tracking-widest text-gold mb-4">Get in touch</h4>
             <ul className="space-y-2.5 text-sm text-ink-dim">
               <li className="flex items-start gap-2"><MapPin size={14} className="mt-0.5 text-gold" /> Bengaluru, India</li>
-              <li className="flex items-start gap-2"><Mail size={14} className="mt-0.5 text-gold" /> hello@roop.in</li>
+              <li className="flex items-start gap-2"><Mail size={14} className="mt-0.5 text-gold" /> roopsupport@gmail.com</li>
               <li className="flex items-start gap-2">
                 <Phone size={14} className="mt-0.5 text-gold" />
-                <a href="tel:+917483318846" className="hover:text-ink">+91 74833 18846</a>
+                <a href="tel:+918088718846" className="hover:text-ink">+91 80887 18846</a>
               </li>
             </ul>
           </div>

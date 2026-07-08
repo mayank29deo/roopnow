@@ -230,7 +230,7 @@ function brandedEmail(opts: {
                   &nbsp;&middot;&nbsp;
                   <a href="https://www.instagram.com/roop.now" style="color:#C9A97E;text-decoration:none;">Instagram</a>
                   &nbsp;&middot;&nbsp;
-                  <a href="mailto:hello@roopnow.com" style="color:#C9A97E;text-decoration:none;">Support</a>
+                  <a href="mailto:roopsupport@gmail.com" style="color:#C9A97E;text-decoration:none;">Support</a>
                 </p>
                 <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#8A6D5C;margin:8px 0 0;text-align:center;">You received this because you joined Roop.</p>
               </td>
@@ -367,7 +367,7 @@ function brandedEmail(opts: {
                   &nbsp;&middot;&nbsp;
                   <a href="https://www.instagram.com/roop.now" style="color:#C9A97E;text-decoration:none;">Instagram</a>
                   &nbsp;&middot;&nbsp;
-                  <a href="mailto:hello@roopnow.com" style="color:#C9A97E;text-decoration:none;">Support</a>
+                  <a href="mailto:roopsupport@gmail.com" style="color:#C9A97E;text-decoration:none;">Support</a>
                 </p>
                 <p style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#8A6D5C;margin:8px 0 0;text-align:center;">You received this because you joined Roop.</p>
               </td>
