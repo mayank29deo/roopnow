@@ -457,6 +457,14 @@ function Row({ label, value, big }: { label: string; value: string; big?: boolea
 //     are visible.
 //   • Red-date tap now shows the block reason inline (item 8) via the
 //     RedDatePanel below.
+// 8-Jul iteration:
+//   • Hourly TimeSlotGrid is back on top of the manual time input.
+//     Chips are colour-coded against the artist's existing schedule:
+//     green = free, amber = tentatively held by another customer,
+//     rose = confirmed booking / artist self-block. Only green chips
+//     are tappable — tapping one pre-fills the arrival time. A small
+//     legend below the grid explains what each colour means so a
+//     customer scanning for an alternate slot doesn't have to guess.
 function DatePicker({
   date, availability, arrivalTime, onArrivalChange,
 }: {
@@ -496,7 +504,16 @@ function DatePicker({
         {isOpen ? "Fully available" : "Partially booked"} · {format(date, "d MMM")}
       </div>
 
-      {/* Already scheduled — only when the artist already has bookings */}
+      {/* Time slot grid — colour-coded picker for the whole day */}
+      <TimeSlotGrid
+        existing={slots}
+        arrivalTime={arrivalTime}
+        onPick={onArrivalChange}
+      />
+
+      {/* Already scheduled — detail cards under the grid so the customer
+          can see the range of each existing booking. Only rendered when
+          there's something to show. */}
       {slots.length > 0 && (
         <section>
           <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-2 flex items-center gap-1.5">
@@ -514,15 +531,7 @@ function DatePicker({
         </section>
       )}
 
-      {/* Open-all-day banner for green days */}
-      {isOpen && (
-        <section className="rounded-2xl border border-emerald/30 bg-emerald/5 p-4">
-          <div className="font-medium text-emerald">Open all day</div>
-          <div className="text-[12px] text-ink-dim mt-0.5">No bookings yet on this date.</div>
-        </section>
-      )}
-
-      {/* Arrival time */}
+      {/* Arrival time — fine-grained manual override on top of the grid */}
       <section>
         <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-3 flex items-center gap-1.5">
           <span className="w-1 h-1 rounded-full bg-gold" />
@@ -549,6 +558,121 @@ function DatePicker({
         Requests are subject to artist confirmation.
       </p>
     </>
+  );
+}
+
+// Business-hour envelope for the chip grid. Chips at every full hour
+// from 6 AM through 10 PM — early bridal prep on one end, late
+// receptions on the other. Matches BUSINESS_HOURS_* in availability.ts.
+const GRID_HOURS: string[] = Array.from({ length: 17 }, (_, i) => {
+  const h = 6 + i;
+  return `${String(h).padStart(2, "0")}:00`;
+});
+
+type SlotAvailability = "available" | "pending" | "blocked";
+
+// Given a candidate arrival hour, walk the artist's existing scheduled
+// slots and figure out what colour the chip should be. We assume the
+// customer's own booking will hold the default 4-hour window (the same
+// default the POST route persists), so any hour whose 4-hour window
+// overlaps a confirmed booking is treated as blocked even if the hour
+// itself sits at the edge of the existing range.
+function slotAvailability(hhmm: string, existing: import("@/lib/availability").ScheduledSlot[]): SlotAvailability {
+  const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
+  const newStart = h * 60 + m;
+  const newEnd = newStart + 240;
+
+  let blocked = false;
+  let pending = false;
+  for (const s of existing) {
+    const [sH, sM] = s.startTime.split(":").map((n) => parseInt(n, 10));
+    const [eH, eM] = s.endTime.split(":").map((n) => parseInt(n, 10));
+    const sStart = sH * 60 + sM;
+    const sEnd = eH * 60 + eM;
+    if (newStart < sEnd && newEnd > sStart) {
+      if (s.kind === "confirmed" || s.kind === "event") blocked = true;
+      else pending = true;
+    }
+  }
+  if (blocked) return "blocked";
+  if (pending) return "pending";
+  return "available";
+}
+
+function hourLabel(hhmm: string): string {
+  const h = parseInt(hhmm.split(":")[0], 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12} ${ampm}`;
+}
+
+function TimeSlotGrid({ existing, arrivalTime, onPick }: {
+  existing: import("@/lib/availability").ScheduledSlot[];
+  arrivalTime: string | null;
+  onPick: (t: string) => void;
+}) {
+  return (
+    <section>
+      <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-3 flex items-center gap-1.5">
+        <span className="w-1 h-1 rounded-full bg-gold" />
+        Pick a time slot
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {GRID_HOURS.map((s) => {
+          const status = slotAvailability(s, existing);
+          const selected = arrivalTime === s;
+          const clickable = status === "available";
+
+          const style = selected
+            ? "border-gold bg-gradient-to-br from-gold/25 to-transparent text-ink"
+            : status === "blocked"
+              ? "border-rose/40 bg-rose/5 text-rose/80 cursor-not-allowed"
+              : status === "pending"
+                ? "border-amber/40 bg-amber/5 text-amber/90 cursor-not-allowed"
+                : "border-emerald/30 bg-emerald/5 text-emerald hover:border-emerald hover:bg-emerald/10";
+
+          const title = status === "blocked"
+            ? "The artist has a confirmed booking that overlaps this time."
+            : status === "pending"
+              ? "Another customer's request is pending on this slot."
+              : undefined;
+
+          return (
+            <button
+              key={s}
+              type="button"
+              disabled={!clickable && !selected}
+              onClick={() => clickable && onPick(s)}
+              title={title}
+              aria-label={`${hourLabel(s)}${title ? " — " + title : ""}`}
+              className={`rounded-xl border py-2.5 text-sm font-medium transition-colors ${style}`}
+            >
+              {hourLabel(s)}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Legend so a customer scanning red/amber knows *why*. */}
+      <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-ink-dim">
+        <LegendChip color="emerald" label="Available" />
+        <LegendChip color="amber" label="Requested (awaiting artist)" />
+        <LegendChip color="rose" label="Confirmed booking" />
+      </div>
+    </section>
+  );
+}
+
+function LegendChip({ color, label }: { color: "emerald" | "amber" | "rose"; label: string }) {
+  const dot =
+    color === "emerald" ? "bg-emerald"
+    : color === "amber" ? "bg-amber"
+    : "bg-rose";
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`w-2 h-2 rounded-full ${dot}`} />
+      {label}
+    </span>
   );
 }
 
