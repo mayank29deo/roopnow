@@ -680,6 +680,46 @@ export async function notifyBookingCompleted(bookingId: string) {
 }
 
 // ============================================================
+// Artist approved by admin — fires when PATCH /api/admin/artists/:id
+// flips verified from false to true. The profile is now live on
+// Discover; the artist gets a welcome-to-the-shelf email.
+// ============================================================
+export async function notifyArtistApproved(artistId: string) {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("artists")
+    .select(`
+      id, display_name,
+      profiles:profiles!artists_user_id_fkey ( name, email )
+    `)
+    .eq("id", artistId)
+    .maybeSingle();
+  if (!data) return;
+  type Row = {
+    id: string;
+    display_name: string;
+    profiles: { name: string; email: string } | null;
+  };
+  const a = data as unknown as Row;
+  const email = a.profiles?.email;
+  if (!email) return;
+  const firstName = a.profiles?.name?.split(" ")[0] ?? a.display_name?.split(" ")[0] ?? "there";
+
+  await send({
+    to: email,
+    subject: "You're live on ROOP ✦",
+    html: brandedEmail({
+      hero: { src: HERO.welcome, alt: "You're on the shelf" },
+      preheader: "Your profile is now discoverable to customers.",
+      title: `Welcome to the shelf, ${firstName}.`,
+      intro: `Good news &mdash; your ROOP profile has been <strong>approved</strong>. It&rsquo;s live on the platform now and customers can find you on <em>Discover</em>.<br/><br/>Keep your calendar, portfolio and services fresh so every visit lands you a booking.`,
+      ctas: [{ label: "Open dashboard", url: `${SITE_URL}/artist/dashboard`, primary: true }],
+      signoff: "Here for every kind of beautiful moment.",
+    }),
+  });
+}
+
+// ============================================================
 // Booking cancelled by customer — fires on DELETE /api/bookings/:id.
 // ============================================================
 export async function notifyBookingCancelledByCustomer(bookingId: string) {

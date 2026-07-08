@@ -15,10 +15,14 @@ export const dynamic = "force-dynamic";
 async function getFeatured() {
   try {
     const supabase = await createClient();
+    // 8-Jul: a featured artist must also be verified — otherwise a
+    // pre-launch artist could sneak onto the homepage via the
+    // `featured` toggle before admin has reviewed them.
     const { data } = await supabase
       .from("artists")
       .select("*, portfolio_items(image_url, sort_order), reviews(rating), services(price)")
       .eq("featured", true)
+      .eq("verified", true)
       .order("years_exp", { ascending: false })
       .limit(6);
     return (data ?? []).map(toCardArtist);

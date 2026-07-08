@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyArtistApproved } from "@/lib/notify";
 
 const schema = z.object({
   verified: z.boolean().optional(),
@@ -35,6 +36,17 @@ export async function PATCH(
   // Service-role client — RLS doesn't allow admin to update arbitrary artists,
   // and we've already gated the route on session role above.
   const admin = createAdminClient();
+
+  // Read the current verified state so we can detect the false→true
+  // transition and fire the approval email exactly once (idempotent
+  // even if the admin toggles the row while it's already verified).
+  const { data: before } = await admin
+    .from("artists")
+    .select("verified")
+    .eq("id", id)
+    .maybeSingle();
+  const wasVerified = !!before?.verified;
+
   const { data, error } = await admin
     .from("artists")
     .update(update)
@@ -44,5 +56,14 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // 8-Jul: only email the artist when we're crossing the false→true
+  // boundary. Never on featured toggles or on re-verify of an
+  // already-verified profile. Fire-and-forget so a mail failure never
+  // rolls back the admin action.
+  if (!wasVerified && body.verified === true) {
+    notifyArtistApproved(id).catch((e) => console.error("artist-approved notify failed:", e));
+  }
+
   return NextResponse.json({ ok: true, artist: data });
 }

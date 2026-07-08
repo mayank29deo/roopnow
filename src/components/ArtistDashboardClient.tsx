@@ -125,10 +125,30 @@ export function ArtistDashboardClient({
               <p className="text-ink-dim">Your studio — manage everything in one place.</p>
             </div>
           </div>
+          {/* Preview stays available even while pending — the artist
+              [id] page carves out self-view so they can see their own
+              draft before approval. */}
           <Link href={`/artists/${artist.id}`} className="btn-ghost">
-            <ArrowUpRight size={14} /> View public profile
+            <ArrowUpRight size={14} /> {artist.verified ? "View public profile" : "Preview profile"}
           </Link>
         </div>
+
+        {/* 8-Jul: profiles are hidden from Discover / homepage until
+            an admin flips verified=true. Surfacing this state clearly
+            so artists don't wonder why their profile isn't showing. */}
+        {!artist.verified && (
+          <div className="mb-10 rounded-3xl border border-gold/40 bg-gradient-to-br from-gold/10 to-transparent p-5 lg:p-6 flex items-start gap-4">
+            <div className="w-11 h-11 rounded-2xl bg-gold/15 border border-gold/30 flex items-center justify-center shrink-0">
+              <BadgeCheck size={20} className="text-gold" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-display text-xl mb-1">Your profile is under review</div>
+              <p className="text-sm text-ink-dim leading-relaxed">
+                Our team is going through your setup. Your profile stays private &mdash; it won&rsquo;t appear on <em>Discover</em> or search results until we approve it. You&rsquo;ll get an email the moment it&rsquo;s live. Meanwhile, please make sure your services, portfolio, and cancellation policy are all filled in so the review moves fast.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="border-b border-border flex gap-2 overflow-x-auto mb-10 -mx-5 px-5">
           {tabs.map((t) => (
