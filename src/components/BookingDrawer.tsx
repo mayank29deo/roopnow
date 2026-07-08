@@ -508,6 +508,28 @@ function DatePicker({
             <span className="w-1 h-1 rounded-full bg-gold" />
             Already scheduled
           </div>
+          {/* Colour-key explainer so a customer scanning the day
+              understands *why* a strip is red or yellow. Booking
+              through an overlapping window is blocked server-side
+              anyway (POST /api/bookings returns 409). */}
+          <p className="text-[12px] text-ink-dim leading-relaxed mb-3">
+            The strips below are the times the artist can&rsquo;t take a new booking.
+            <span className="block mt-1">
+              <span className="inline-flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-rose inline-block" />
+                <strong className="text-rose">Red</strong>
+              </span>
+              <span className="ml-1">&mdash; the artist has confirmed a booking during this time.</span>
+            </span>
+            <span className="block mt-0.5">
+              <span className="inline-flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber inline-block" />
+                <strong className="text-amber">Yellow</strong>
+              </span>
+              <span className="ml-1">&mdash; another customer has requested this time and it&rsquo;s awaiting the artist&rsquo;s response.</span>
+            </span>
+            <span className="block mt-1 italic">Picking an overlapping arrival time will be blocked before the request is sent.</span>
+          </p>
           <div className="space-y-2">
             {slots
               .slice()
@@ -597,27 +619,35 @@ function RedDatePanel({ date, reason, fullyBooked }: {
 }
 
 function ScheduledSlotCard({ slot }: { slot: import("@/lib/availability").ScheduledSlot }) {
+  // Confirmed booking (or the artist's own event) = red — the slot is
+  // definitively taken. Pending customer request = yellow — still up
+  // in the air but overlapping is blocked either way. Matches the
+  // explainer copy above so the visual and the words agree.
   const tone =
-    slot.kind === "confirmed"
-      ? "border-emerald/40 bg-emerald/5"
-      : slot.kind === "tentative"
-        ? "border-gold/40 bg-gold/5"
-        : "border-border bg-surface/40";
+    slot.kind === "confirmed" || slot.kind === "event"
+      ? "border-rose/40 bg-rose/5"
+      : "border-amber/40 bg-amber/5";
   const dotTone =
-    slot.kind === "confirmed" ? "bg-emerald" : slot.kind === "tentative" ? "bg-gold" : "bg-ink-dim";
+    slot.kind === "confirmed" || slot.kind === "event" ? "bg-rose" : "bg-amber";
   const subline =
     slot.kind === "confirmed"
-      ? "Confirmed booking"
-      : slot.kind === "tentative"
-        ? "Tentatively held · end time to be confirmed"
-        : "Artist scheduled";
+      ? "Confirmed booking — the artist has accepted this slot."
+      : slot.kind === "event"
+        ? "The artist has blocked this time on their own calendar."
+        : "Another customer&rsquo;s request is pending here — waiting on the artist.";
   return (
     <div className={`rounded-2xl border px-4 py-3 ${tone}`}>
       <div className="flex items-center gap-2 text-sm font-medium">
         <span className={`w-1.5 h-1.5 rounded-full ${dotTone}`} />
         {formatRange(slot.startTime, slot.endTime)}
       </div>
-      <div className="text-[12px] text-ink-dim mt-0.5 ml-3.5">{subline}</div>
+      <div
+        className="text-[12px] text-ink-dim mt-0.5 ml-3.5"
+        // Subline may include an HTML entity — dangerouslySetInnerHTML
+        // just lets us keep &rsquo; readable in source; string is a
+        // fixed constant, no user input.
+        dangerouslySetInnerHTML={{ __html: subline }}
+      />
     </div>
   );
 }
