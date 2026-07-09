@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createClient, getSessionUser } from "@/lib/supabase/server";
 import { z } from "zod";
 import { notifyBookingRequested } from "@/lib/notify";
@@ -111,8 +111,14 @@ export async function POST(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    // Fire-and-forget email (never blocks the response).
-    notifyBookingRequested(booking.id).catch((e) => console.error("notify failed:", e));
+    // 9-Jul: emails now run inside after() so the serverless runtime
+    // keeps the promise alive past the response — a raw fire-and-forget
+    // promise was being killed once we returned, which is why nothing
+    // was reaching Resend anymore.
+    after(async () => {
+      try { await notifyBookingRequested(booking.id); }
+      catch (e) { console.error("notify failed:", e); }
+    });
 
     return NextResponse.json({ ok: true, bookingId: booking.id });
   } catch (err) {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createHmac } from "crypto";
 import { getSessionUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -36,7 +36,10 @@ export async function POST(req: NextRequest) {
     .eq("artist_id", user.artistId);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  notifySubscriptionPaid(subscriptionId).catch((e) => console.error("notify failed:", e));
+  after(async () => {
+    try { await notifySubscriptionPaid(subscriptionId); }
+    catch (e) { console.error("notify failed:", e); }
+  });
 
   return NextResponse.json({ ok: true });
 }

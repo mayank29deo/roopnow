@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -59,10 +59,13 @@ export async function PATCH(
 
   // 8-Jul: only email the artist when we're crossing the false→true
   // boundary. Never on featured toggles or on re-verify of an
-  // already-verified profile. Fire-and-forget so a mail failure never
-  // rolls back the admin action.
+  // already-verified profile. 9-Jul: wrapped in after() so the
+  // serverless runtime keeps the promise alive past the response.
   if (!wasVerified && body.verified === true) {
-    notifyArtistApproved(id).catch((e) => console.error("artist-approved notify failed:", e));
+    after(async () => {
+      try { await notifyArtistApproved(id); }
+      catch (e) { console.error("artist-approved notify failed:", e); }
+    });
   }
 
   return NextResponse.json({ ok: true, artist: data });

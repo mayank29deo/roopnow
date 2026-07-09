@@ -412,9 +412,14 @@ export async function notifyWelcome(opts: {
     }),
   });
 
-  // Tell the admins a new user joined.
-  notifyAdminNewUser({ name: opts.name || firstName, email: opts.email, role: opts.role })
-    .catch((e) => console.error("admin new-user notify failed:", e));
+  // Tell the admins a new user joined. Awaited so the whole notify
+  // chain finishes before the enclosing after() callback returns —
+  // dangling admin sends were being killed by the serverless runtime.
+  try {
+    await notifyAdminNewUser({ name: opts.name || firstName, email: opts.email, role: opts.role });
+  } catch (e) {
+    console.error("admin new-user notify failed:", e);
+  }
 }
 
 // ============================================================
@@ -499,10 +504,13 @@ export async function notifyBookingRequested(bookingId: string) {
     });
   }
 
-  // Admin — internal handoff record.
-  notifyAdminBookingRequest(bookingId).catch((e) =>
-    console.error("admin booking-request notify failed:", e),
-  );
+  // Admin — internal handoff record. Awaited so the fan-out finishes
+  // before the outer after() callback returns.
+  try {
+    await notifyAdminBookingRequest(bookingId);
+  } catch (e) {
+    console.error("admin booking-request notify failed:", e);
+  }
 }
 
 // ============================================================
@@ -598,10 +606,13 @@ export async function notifyBookingDecided(
     }
   }
 
-  // Admin — booking outcome record.
-  notifyAdminBookingDecided(bookingId, action, reason).catch((e) =>
-    console.error("admin booking-decided notify failed:", e),
-  );
+  // Admin — booking outcome record. Awaited so the fan-out finishes
+  // before the outer after() callback returns.
+  try {
+    await notifyAdminBookingDecided(bookingId, action, reason);
+  } catch (e) {
+    console.error("admin booking-decided notify failed:", e);
+  }
 }
 
 // ============================================================

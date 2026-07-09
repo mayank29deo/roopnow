@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { notifyWelcome } from "@/lib/notify";
 import { z } from "zod";
@@ -29,10 +29,12 @@ export async function POST(req: NextRequest) {
     }
 
     // The handle_new_user trigger creates the profile (and artist row if applicable).
-    // Fire-and-forget welcome email — never blocks the signup response.
-    notifyWelcome({ email: data.email, name: data.name, role: data.role }).catch((e) =>
-      console.error("welcome notify failed:", e)
-    );
+    // Welcome email runs inside after() so the serverless runtime
+    // keeps the promise alive past the response.
+    after(async () => {
+      try { await notifyWelcome({ email: data.email, name: data.name, role: data.role }); }
+      catch (e) { console.error("welcome notify failed:", e); }
+    });
 
     return NextResponse.json({ ok: true, role: data.role });
   } catch (err) {

@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -79,12 +79,16 @@ export async function GET(request: NextRequest) {
 
         // Welcome email — fires once per user on the first OAuth callback.
         // Uses the post-upgrade role so artists get the artist email.
+        // 9-Jul: wrapped in after() so the serverless runtime keeps
+        // the promise alive past the redirect response.
         if (isFreshSignup && user.email) {
-          notifyWelcome({
-            email: user.email,
-            name: profile?.name ?? "",
-            role: effectiveRole as "customer" | "artist" | "admin",
-          }).catch((e) => console.error("welcome notify failed:", e));
+          const emailAddr = user.email;
+          const nameSnapshot = profile?.name ?? "";
+          const roleSnapshot = effectiveRole as "customer" | "artist" | "admin";
+          after(async () => {
+            try { await notifyWelcome({ email: emailAddr, name: nameSnapshot, role: roleSnapshot }); }
+            catch (e) { console.error("welcome notify failed:", e); }
+          });
         }
 
         const dest =

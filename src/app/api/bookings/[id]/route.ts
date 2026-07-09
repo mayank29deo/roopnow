@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createClient, getSessionUser } from "@/lib/supabase/server";
 import { z } from "zod";
 import {
@@ -37,7 +37,13 @@ export async function DELETE(
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   if (wasLive) {
-    notifyBookingCancelledByCustomer(id).catch((e) => console.error("notify failed:", e));
+    // after() keeps the promise alive past the response — a bare
+    // fire-and-forget promise was being killed by the serverless
+    // runtime and Resend never got the request.
+    after(async () => {
+      try { await notifyBookingCancelledByCustomer(id); }
+      catch (e) { console.error("notify failed:", e); }
+    });
   }
   return NextResponse.json({ ok: true });
 }
@@ -94,9 +100,17 @@ export async function PATCH(
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   if (body.action === "accept" || body.action === "reject") {
-    notifyBookingDecided(id, body.action, body.reason).catch((e) => console.error("notify failed:", e));
+    const action = body.action;
+    const reason = body.reason;
+    after(async () => {
+      try { await notifyBookingDecided(id, action, reason); }
+      catch (e) { console.error("notify failed:", e); }
+    });
   } else if (body.action === "complete") {
-    notifyBookingCompleted(id).catch((e) => console.error("notify failed:", e));
+    after(async () => {
+      try { await notifyBookingCompleted(id); }
+      catch (e) { console.error("notify failed:", e); }
+    });
   }
 
   return NextResponse.json({ ok: true, booking: data });
