@@ -1279,6 +1279,20 @@ function PortfolioTab({ portfolio: initial, artistId, userId }: {
     router.refresh();
   }
 
+  // 9-Jul: caption saved with the item is now visible on the card
+  // and editable inline via a small pencil. Solves Suraksha's
+  // "previous caption didn't appear" — the caption was persisting
+  // but was never rendered on the gallery grid.
+  async function saveCaption(id: string, next: string) {
+    setPortfolio((list) => list.map((x) => (x.id === id ? { ...x, caption: next } : x)));
+    await fetch(`/api/portfolio/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caption: next }),
+    }).catch(() => {});
+    router.refresh();
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
       <div className="glass rounded-3xl p-6 lg:p-8 mb-8">
@@ -1330,17 +1344,96 @@ function PortfolioTab({ portfolio: initial, artistId, userId }: {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {portfolio.map((p) => (
-            <div key={p.id} className="group relative aspect-[4/5] rounded-2xl overflow-hidden border border-border">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-              <button onClick={() => remove(p.id)} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-rose/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Trash2 size={12} />
-              </button>
-            </div>
+            <PortfolioCard
+              key={p.id}
+              item={p}
+              onRemove={() => remove(p.id)}
+              onCaptionSave={(next) => saveCaption(p.id, next)}
+            />
           ))}
         </div>
       )}
     </motion.div>
+  );
+}
+
+// 9-Jul: portfolio card with caption display + inline edit. Caption
+// was persisting on the server but never surfaced on the dashboard,
+// which read as "the caption disappeared".
+function PortfolioCard({
+  item, onRemove, onCaptionSave,
+}: {
+  item: PortfolioItem;
+  onRemove: () => void;
+  onCaptionSave: (caption: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(item.caption ?? "");
+
+  function commit() {
+    const trimmed = draft.trim();
+    if (trimmed !== (item.caption ?? "")) onCaptionSave(trimmed);
+    setEditing(false);
+  }
+
+  return (
+    <div className="group relative aspect-[4/5] rounded-2xl overflow-hidden border border-border">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={item.imageUrl} alt={item.caption ?? ""} className="absolute inset-0 w-full h-full object-cover" />
+
+      {/* Bottom gradient + caption strip */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg via-bg/70 to-transparent p-3">
+        {editing ? (
+          <div className="flex flex-col gap-2">
+            <input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commit();
+                if (e.key === "Escape") { setDraft(item.caption ?? ""); setEditing(false); }
+              }}
+              placeholder="Caption for this photo"
+              className="w-full px-2.5 py-1.5 rounded-lg bg-bg/80 border border-gold/40 focus:border-gold outline-none text-xs text-ink"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setDraft(item.caption ?? ""); setEditing(false); }}
+                className="text-[11px] text-ink-dim hover:text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={commit}
+                className="text-[11px] text-gold hover:underline font-medium"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="w-full text-left flex items-start gap-1.5"
+            title="Click to edit caption"
+          >
+            <span className="text-xs text-ink leading-snug line-clamp-2 flex-1">
+              {item.caption?.trim() || <span className="italic text-ink-dim">Add a caption…</span>}
+            </span>
+            <Edit3 size={11} className="text-ink-dim group-hover:text-gold shrink-0 mt-0.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Remove button — top-right, hover-reveal */}
+      <button
+        onClick={onRemove}
+        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-rose/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
   );
 }
 

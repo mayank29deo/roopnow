@@ -375,8 +375,16 @@ export function ArtistProfile({
                     onClick={() => openLightbox(i)}
                     className="group relative aspect-[4/5] rounded-2xl overflow-hidden border border-border"
                   >
-                    <img src={p.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-bg/80 via-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <img src={p.imageUrl} alt={p.caption ?? ""} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-bg/85 via-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {/* Caption strip — rides in on hover so the image
+                        stays clean at rest. Only rendered when the
+                        artist has actually written one. */}
+                    {p.caption?.trim() && (
+                      <div className="absolute inset-x-0 bottom-0 p-3 text-left opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-xs text-ink leading-snug line-clamp-2">{p.caption}</span>
+                      </div>
+                    )}
                   </button>
                 ))}
               </motion.div>
@@ -482,15 +490,24 @@ export function ArtistProfile({
             <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 w-11 h-11 rounded-full bg-surface border border-border flex items-center justify-center z-10"><X size={18} /></button>
             <button onClick={(e) => { e.stopPropagation(); prev(); }} className="absolute left-4 w-11 h-11 rounded-full bg-surface border border-border flex items-center justify-center z-10"><ChevronLeft size={18} /></button>
             <button onClick={(e) => { e.stopPropagation(); next(); }} className="absolute right-4 w-11 h-11 rounded-full bg-surface border border-border flex items-center justify-center z-10"><ChevronRight size={18} /></button>
-            <motion.img
+            <motion.div
               key={lightbox}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               onClick={(e) => e.stopPropagation()}
-              src={artist.portfolio[lightbox].imageUrl}
-              alt=""
-              className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
-            />
+              className="flex flex-col items-center gap-3 max-h-[92vh]"
+            >
+              <img
+                src={artist.portfolio[lightbox].imageUrl}
+                alt={artist.portfolio[lightbox].caption ?? ""}
+                className="max-h-[82vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
+              />
+              {artist.portfolio[lightbox].caption?.trim() && (
+                <p className="max-w-[90vw] text-center text-sm text-ink font-display italic">
+                  {artist.portfolio[lightbox].caption}
+                </p>
+              )}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
