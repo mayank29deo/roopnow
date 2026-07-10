@@ -124,12 +124,14 @@ function brandedEmail(opts: {
     const frameSrc = opts.framedSrc ?? HERO.confirmed;
     // Dark wine ink reads cleanly on the cream parchment. Gold is
     // reserved for the CTA button so the text stays calm and luxe.
+    // 10-Jul: !important added everywhere so mobile Gmail's auto
+    // dark-mode inversion can't wash the ink out on the parchment.
     const INK = "#4A0E1E";
     const INK_SOFT = "#6B1E2E";
     const ACCENT = "#8B6914";
 
     const accent = opts.titleAccent
-      ? `<br/><span style="font-style:italic;color:${ACCENT};font-weight:500;">${opts.titleAccent}</span>`
+      ? `<br/><span class="parchment-accent" style="font-style:italic;color:${ACCENT} !important;font-weight:500;">${opts.titleAccent}</span>`
       : "";
 
     const ctasInside = opts.ctas?.length
@@ -137,8 +139,8 @@ function brandedEmail(opts: {
           ${opts.ctas
             .map((cta) => {
               const style = cta.primary !== false
-                ? "padding:13px 28px;background:linear-gradient(135deg,#E8B86D,#A8875E);color:#1A0710;font-weight:600;"
-                : `padding:12px 26px;border:1px solid ${INK_SOFT};color:${INK};`;
+                ? "padding:13px 28px;background:linear-gradient(135deg,#E8B86D,#A8875E);color:#1A0710 !important;font-weight:600;"
+                : `padding:12px 26px;border:1px solid ${INK_SOFT};color:${INK} !important;`;
               return `<td style="padding:0 4px;">
                 <a href="${cta.url}" style="display:inline-block;${style}text-decoration:none;border-radius:999px;font-size:13px;font-family:Arial,Helvetica,sans-serif;">${cta.label}</a>
               </td>`;
@@ -148,21 +150,43 @@ function brandedEmail(opts: {
       : "";
 
     const introInside = opts.intro
-      ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;color:${INK};margin:14px 0 0;">${opts.intro}</p>`
+      ? `<p class="parchment-ink" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;color:${INK} !important;margin:14px 0 0;">${opts.intro}</p>`
       : "";
 
     const bodyInside = opts.body
-      ? `<div style="font-family:Arial,Helvetica,sans-serif;color:${INK};font-size:13px;line-height:1.7;margin-top:12px;">${opts.body}</div>`
+      ? `<div class="parchment-ink" style="font-family:Arial,Helvetica,sans-serif;color:${INK} !important;font-size:13px;line-height:1.7;margin-top:12px;">${opts.body}</div>`
       : "";
 
     return `<!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- 10-Jul: force light rendering so Gmail Android / iOS + Outlook
+         dark-mode don't invert the dark-wine ink to unreadable light
+         tones on the cream parchment. -->
+    <meta name="color-scheme" content="light only" />
+    <meta name="supported-color-schemes" content="light only" />
     <title>Roop</title>
+    <style>
+      :root { color-scheme: light only; supported-color-schemes: light only; }
+      /* Belt-and-braces overrides for clients that still auto-invert
+         even after the meta hint: Gmail mobile, Outlook.com, Yahoo. */
+      u + .body .parchment-ink, u + .body .parchment-ink * { color: #4A0E1E !important; }
+      u + .body .parchment-ink-soft, u + .body .parchment-ink-soft * { color: #6B1E2E !important; }
+      u + .body .parchment-accent, u + .body .parchment-accent * { color: #8B6914 !important; }
+      [data-ogsc] .parchment-ink, [data-ogsb] .parchment-ink { color: #4A0E1E !important; }
+      [data-ogsc] .parchment-ink-soft, [data-ogsb] .parchment-ink-soft { color: #6B1E2E !important; }
+      [data-ogsc] .parchment-accent, [data-ogsb] .parchment-accent { color: #8B6914 !important; }
+      @media (prefers-color-scheme: dark) {
+        .parchment-ink, .parchment-ink * { color: #4A0E1E !important; }
+        .parchment-ink-soft, .parchment-ink-soft * { color: #6B1E2E !important; }
+        .parchment-accent, .parchment-accent * { color: #8B6914 !important; }
+        .parchment-bg { background: #F5E9D7 !important; background-color: #F5E9D7 !important; }
+      }
+    </style>
   </head>
-  <body style="margin:0;padding:0;background:#1A0710;">
+  <body class="body" style="margin:0;padding:0;background:#1A0710;">
     ${preheaderHtml}
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#1A0710;padding:32px 16px;">
       <tr>
@@ -171,7 +195,11 @@ function brandedEmail(opts: {
 
             <tr><td style="height:4px;background:linear-gradient(90deg,#E8B86D,#D4B586,#A8875E);font-size:0;line-height:0;">&nbsp;</td></tr>
 
-            <!-- Framed parchment cell — bg image + overlaid text -->
+            <!-- Framed parchment cell — bg image + overlaid text.
+                 The inner td wraps content in an explicit cream bgcolor
+                 so even if a mail client strips the bg-image, the text
+                 still lands on a visibly-cream surface (not the outer
+                 dark wine that Gmail's dark mode would then invert). -->
             <tr>
               <td
                 width="600"
@@ -180,6 +208,7 @@ function brandedEmail(opts: {
                 align="center"
                 bgcolor="#F5E9D7"
                 background="${frameSrc}"
+                class="parchment-bg"
                 style="background-image:url('${frameSrc}');background-color:#F5E9D7;background-repeat:no-repeat;background-position:top center;background-size:600px 1067px;width:600px;height:1067px;mso-line-height-rule:exactly;"
               >
                 <!--[if mso]>
@@ -191,7 +220,7 @@ function brandedEmail(opts: {
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;">
                   <tr>
                     <td align="center" valign="top" style="padding:285px 70px 0;">
-                      ${opts.title ? `<h1 style="font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;color:${INK};margin:0;font-weight:500;letter-spacing:0.01em;">${opts.title}${accent}</h1>` : ""}
+                      ${opts.title ? `<h1 class="parchment-ink" style="font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;color:${INK} !important;margin:0;font-weight:500;letter-spacing:0.01em;">${opts.title}${accent}</h1>` : ""}
                       ${introInside}
                       ${bodyInside}
                       ${ctasInside}
@@ -199,21 +228,21 @@ function brandedEmail(opts: {
                       <!-- Decorative divider + signoff/with-love/logo/tagline, all inside the frame -->
                       <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:24px auto 0;">
                         <tr>
-                          <td style="width:40px;height:1px;background:${INK_SOFT};opacity:0.4;font-size:0;line-height:0;">&nbsp;</td>
-                          <td style="padding:0 12px;color:${ACCENT};font-size:13px;font-family:Georgia,serif;line-height:1;">·&nbsp;&#10022;&nbsp;·</td>
-                          <td style="width:40px;height:1px;background:${INK_SOFT};opacity:0.4;font-size:0;line-height:0;">&nbsp;</td>
+                          <td class="parchment-ink-soft" style="width:40px;height:1px;background:${INK_SOFT} !important;opacity:0.4;font-size:0;line-height:0;">&nbsp;</td>
+                          <td class="parchment-accent" style="padding:0 12px;color:${ACCENT} !important;font-size:13px;font-family:Georgia,serif;line-height:1;">·&nbsp;&#10022;&nbsp;·</td>
+                          <td class="parchment-ink-soft" style="width:40px;height:1px;background:${INK_SOFT} !important;opacity:0.4;font-size:0;line-height:0;">&nbsp;</td>
                         </tr>
                       </table>
 
-                      <p style="font-family:'Playfair Display',Georgia,serif;font-size:16px;font-style:italic;color:${INK};margin:14px 0 0;line-height:1.4;">${signoff}</p>
+                      <p class="parchment-ink" style="font-family:'Playfair Display',Georgia,serif;font-size:16px;font-style:italic;color:${INK} !important;margin:14px 0 0;line-height:1.4;">${signoff}</p>
 
-                      <p style="font-family:Arial,Helvetica,sans-serif;font-size:9px;letter-spacing:0.32em;color:${INK_SOFT};margin:12px 0 0;text-transform:uppercase;">With Love, The Roop Team</p>
+                      <p class="parchment-ink-soft" style="font-family:Arial,Helvetica,sans-serif;font-size:9px;letter-spacing:0.32em;color:${INK_SOFT} !important;margin:12px 0 0;text-transform:uppercase;">With Love, The Roop Team</p>
 
                       <p style="margin:14px 0 0;">
-                        <span style="display:inline-block;font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:700;letter-spacing:0.12em;color:${INK};">ROOP</span>
+                        <span class="parchment-ink" style="display:inline-block;font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:700;letter-spacing:0.12em;color:${INK} !important;">ROOP</span>
                       </p>
 
-                      <p style="font-family:Arial,Helvetica,sans-serif;font-size:8px;letter-spacing:0.3em;color:${INK_SOFT};margin:6px 0 0;text-transform:uppercase;">Where Creation Meets the Moment</p>
+                      <p class="parchment-ink-soft" style="font-family:Arial,Helvetica,sans-serif;font-size:8px;letter-spacing:0.3em;color:${INK_SOFT} !important;margin:6px 0 0;text-transform:uppercase;">Where Creation Meets the Moment</p>
                     </td>
                   </tr>
                 </table>
@@ -302,11 +331,19 @@ function brandedEmail(opts: {
     : "";
 
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- 10-Jul: same light-only lock the framed template uses so
+         Gmail Android / iOS + Outlook dark-mode don't repaint the
+         hero + text bleeds into an unreadable low-contrast palette. -->
+    <meta name="color-scheme" content="light only" />
+    <meta name="supported-color-schemes" content="light only" />
     <title>Roop</title>
+    <style>
+      :root { color-scheme: light only; supported-color-schemes: light only; }
+    </style>
   </head>
   <body style="margin:0;padding:0;background:#1A0710;">
     ${preheaderHtml}
