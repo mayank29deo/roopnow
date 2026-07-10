@@ -321,28 +321,46 @@ function RequestsTab({ requests }: { requests: Booking[] }) {
 
 function RequestCard({ booking }: { booking: Booking }) {
   const router = useRouter();
-  const [mode, setMode] = useState<"idle" | "rejecting" | "loading">("idle");
+  // 10-Jul: "confirming" step lets the artist choose the block
+  // duration before the booking flips to accepted. Default seeded
+  // with whatever's already on the row (usually the 4h default
+  // written at request time).
+  const [mode, setMode] = useState<"idle" | "rejecting" | "confirming" | "loading">("idle");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [duration, setDuration] = useState<number>(240);
 
-  async function act(action: "accept" | "reject") {
-    if (action === "reject" && !reason.trim()) {
-      setMode("rejecting");
-      return;
-    }
+  async function submitReject() {
     setMode("loading"); setError(null);
     try {
       const res = await fetch(`/api/bookings/${booking.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, reason: action === "reject" ? reason : undefined }),
+        body: JSON.stringify({ action: "reject", reason }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
-      setMode("idle");
+      setMode("rejecting");
+    }
+  }
+
+  async function submitAccept() {
+    setMode("loading"); setError(null);
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "accept", durationMinutes: duration }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Failed");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+      setMode("confirming");
     }
   }
 
@@ -389,7 +407,7 @@ function RequestCard({ booking }: { booking: Booking }) {
           <div className="flex gap-2 justify-end">
             <button onClick={() => { setMode("idle"); setReason(""); }} className="btn-ghost text-xs py-2 px-3">Cancel</button>
             <button
-              onClick={() => act("reject")}
+              onClick={submitReject}
               disabled={!reason.trim()}
               className="btn-ghost text-xs py-2 px-3 text-rose border-rose/40 hover:bg-rose/10 disabled:opacity-50"
             >
@@ -397,6 +415,15 @@ function RequestCard({ booking }: { booking: Booking }) {
             </button>
           </div>
         </div>
+      ) : mode === "confirming" ? (
+        <ConfirmBlockPanel
+          booking={booking}
+          duration={duration}
+          onDurationChange={setDuration}
+          onCancel={() => { setMode("idle"); setDuration(240); }}
+          onConfirm={submitAccept}
+          error={error}
+        />
       ) : (
         // 24-Jun tracker #5: Accept and Reject made noticeably bigger
         // and split into equal half-width pills so neither feels like
@@ -412,7 +439,7 @@ function RequestCard({ booking }: { booking: Booking }) {
               <X size={16} /> Reject
             </button>
             <button
-              onClick={() => act("accept")}
+              onClick={() => setMode("confirming")}
               disabled={mode === "loading"}
               className="btn-primary flex-1 py-3.5 px-6 text-base font-semibold disabled:opacity-50"
             >
@@ -423,6 +450,137 @@ function RequestCard({ booking }: { booking: Booking }) {
       )}
     </div>
   );
+}
+
+// 10-Jul: artist picks how long they'll actually be blocked out for
+// this booking — travel + service + travel back. Preset chips cover
+// the common cases; the custom end-time picker takes anything else.
+// Duration is stored on bookings.duration_minutes and drives both
+// the customer date picker rendering and the server-side overlap
+// guard on POST /api/bookings.
+const DURATION_PRESETS: { label: string; minutes: number }[] = [
+  { label: "1 hr", minutes: 60 },
+  { label: "2 hrs", minutes: 120 },
+  { label: "3 hrs", minutes: 180 },
+  { label: "4 hrs", minutes: 240 },
+  { label: "5 hrs", minutes: 300 },
+  { label: "6 hrs", minutes: 360 },
+  { label: "All day", minutes: 720 },
+];
+
+function ConfirmBlockPanel({
+  booking, duration, onDurationChange, onCancel, onConfirm, error,
+}: {
+  booking: Booking;
+  duration: number;
+  onDurationChange: (v: number) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+  error: string | null;
+}) {
+  // Compute start (HH:MM → minutes) + resulting end for the preview
+  // strip. If timeSlot is anything weird, fall back gracefully so
+  // this UI never explodes on stale data.
+  const [sh, sm] = (booking.timeSlot ?? "00:00").split(":").map((n) => parseInt(n, 10));
+  const startMinutes = (Number.isNaN(sh) ? 0 : sh) * 60 + (Number.isNaN(sm) ? 0 : sm);
+  const endMinutes = startMinutes + duration;
+  const startLabel = fmtHM(startMinutes);
+  const endLabel = fmtHM(endMinutes);
+
+  function pickCustomEnd(hhmm: string) {
+    const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
+    if (Number.isNaN(h) || Number.isNaN(m)) return;
+    let end = h * 60 + m;
+    if (end <= startMinutes) end += 24 * 60; // spans midnight
+    const mins = Math.min(end - startMinutes, 1440);
+    if (mins > 0) onDurationChange(mins);
+  }
+
+  const customEndValue = fmtHMMachine(endMinutes % (24 * 60));
+
+  return (
+    <div className="mt-5 pt-5 border-t border-border">
+      <div className="mb-4">
+        <div className="text-xs uppercase tracking-widest text-ink-dim mb-1">Block your calendar for</div>
+        <p className="text-sm text-ink-dim">
+          Pick how long you&rsquo;ll actually be tied up &mdash; travel out, service, travel back.
+          The customer will see this window as unavailable to other clients.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {DURATION_PRESETS.map((p) => {
+          const active = duration === p.minutes;
+          return (
+            <button
+              key={p.minutes}
+              type="button"
+              onClick={() => onDurationChange(p.minutes)}
+              className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                active
+                  ? "border-gold bg-gradient-to-br from-gold/25 to-transparent text-ink"
+                  : "border-border bg-surface/40 text-ink-dim hover:border-gold/40"
+              }`}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <label className="block mb-4">
+        <span className="text-[10px] uppercase tracking-widest text-ink-dim block mb-1.5">Or block until a specific time</span>
+        <input
+          type="time"
+          value={customEndValue}
+          onChange={(e) => pickCustomEnd(e.target.value)}
+          step={900}
+          className="dash-input"
+        />
+      </label>
+
+      <div className="rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 to-transparent p-4 mb-4">
+        <div className="text-[10px] uppercase tracking-widest text-gold mb-1">Block preview</div>
+        <div className="font-display text-xl text-ink">{startLabel} &mdash; {endLabel}</div>
+        <div className="text-xs text-ink-dim mt-1">
+          {fmtDurationLabel(duration)} &middot; No other customer can book you inside this window on {formatDateLong(new Date(booking.date))}.
+        </div>
+      </div>
+
+      {error && <div className="text-sm text-rose mb-3">{error}</div>}
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button onClick={onCancel} className="btn-ghost flex-1">Cancel</button>
+        <button onClick={onConfirm} className="btn-primary flex-1">
+          <Check size={16} /> Confirm &amp; accept
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function fmtHM(totalMinutes: number): string {
+  const m = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return min === 0 ? `${h12}:00 ${ampm}` : `${h12}:${String(min).padStart(2, "0")} ${ampm}`;
+}
+
+function fmtHMMachine(totalMinutes: number): string {
+  const m = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+function fmtDurationLabel(minutes: number): string {
+  if (minutes === 720) return "All day";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return `${h} hr${h === 1 ? "" : "s"}`;
+  return `${h}h ${m}m`;
 }
 
 // ============================================================

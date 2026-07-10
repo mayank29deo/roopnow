@@ -49,9 +49,15 @@ export async function DELETE(
 }
 
 // Artist transitions a booking: pending → accepted / rejected (with reason) / completed.
+// 10-Jul: on accept, the artist can override the customer's default
+// 4-hour block by sending durationMinutes — how long they'll actually
+// be tied up (travel out + service + travel back). Stored on
+// bookings.duration_minutes so the overlap check + customer date
+// picker both see the true block window.
 const patchSchema = z.object({
   action: z.enum(["accept", "reject", "complete"]),
   reason: z.string().optional(),
+  durationMinutes: z.number().int().positive().max(1440).optional(),
 });
 
 export async function PATCH(
@@ -87,12 +93,21 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  // Build the update payload — duration_minutes is only touched on
+  // accept, and only when the artist explicitly sent one. Silence
+  // means keep whatever's already on the row (usually the 4h default
+  // written at request time).
+  const update: Record<string, unknown> = {
+    status: statusMap[body.action],
+    rejection_reason: body.action === "reject" ? body.reason : null,
+  };
+  if (body.action === "accept" && typeof body.durationMinutes === "number") {
+    update.duration_minutes = body.durationMinutes;
+  }
+
   const { data, error } = await supabase
     .from("bookings")
-    .update({
-      status: statusMap[body.action],
-      rejection_reason: body.action === "reject" ? body.reason : null,
-    })
+    .update(update)
     .eq("id", id)
     .select()
     .maybeSingle();

@@ -3,6 +3,18 @@ import { createClient, getSessionUser } from "@/lib/supabase/server";
 import { z } from "zod";
 import { notifyBookingRequested } from "@/lib/notify";
 
+// "6:00 AM" / "5:30 PM" for the 409 overlap message. Handles times
+// past midnight so a booking that spans 11 PM → 1 AM still labels
+// its end as "1:00 AM".
+function fmt12(totalMinutes: number): string {
+  const m = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return min === 0 ? `${h12}:00 ${ampm}` : `${h12}:${String(min).padStart(2, "0")} ${ampm}`;
+}
+
 const schema = z.object({
   artistId: z.string(),
   serviceId: z.string(),
@@ -76,8 +88,13 @@ export async function POST(req: NextRequest) {
       // Half-open overlap: [newStart, newEnd) ∩ [bStart, bEnd) is
       // non-empty iff newStart < bEnd AND newEnd > bStart.
       if (newStart < bEnd && newEnd > bStart) {
+        // 10-Jul: return the exact busy range + earliest free time so
+        // the customer sees "6:00 AM – 10:00 AM, try after 10:00 AM"
+        // instead of a generic collision.
         return NextResponse.json(
-          { error: "The artist has already been booked for this time slot. Please pick a different time." },
+          {
+            error: `The artist is already booked from ${fmt12(bStart)} to ${fmt12(bEnd)} on this date. Please pick a time after ${fmt12(bEnd)} or another day.`,
+          },
           { status: 409 },
         );
       }
