@@ -24,7 +24,9 @@ type Artist = {
   city: string; area: string; avatarUrl: string; coverUrl: string;
   specialties: string; yearsExp: number; instagram: string | null;
   verified: boolean; featured: boolean; profileViews: number;
-  experienceSummary: string; travelRadiusKm: number;
+  experienceSummary: string;
+  certifiedFrom: string;
+  travelRadiusKm: number;
   // Phase 1 additions
   serviceMode: "studio" | "client" | "both";
   artistType: "solo" | "team";
@@ -56,7 +58,12 @@ const SKIN_TONE_OPTIONS = [
 type Booking = {
   id: string; date: string; timeSlot: string; status: string;
   totalPrice: number; notes: string | null; address: string | null;
-  eventName: string | null; budget: number | null; partySize: number | null; rejectionReason: string | null;
+  eventName: string | null; budget: number | null; partySize: number | null;
+  // 10-Jul tracker item 8: end time on the card is computed from
+  // durationMinutes when the artist confirmed one, else the standard
+  // service duration.
+  durationMinutes: number | null;
+  rejectionReason: string | null;
   customerName: string; customerPhone: string | null; customerEmail: string | null;
   serviceName: string; serviceCategory: string; serviceDuration: number;
 };
@@ -611,30 +618,165 @@ function BookingsTab({ bookings }: { bookings: Booking[] }) {
       ) : (
         <div className="grid gap-3">
           {filtered.map((b) => (
-            <div key={b.id} className="glass rounded-2xl p-5 grid lg:grid-cols-[1fr_auto] gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="chip">{b.serviceCategory}</span>
-                  <StatusPill status={b.status} />
-                </div>
-                <div className="font-semibold text-lg">{b.eventName ?? b.serviceName}</div>
-                <div className="text-sm text-ink-dim mt-0.5">{b.customerName}{b.customerPhone ? ` · ${b.customerPhone}` : ""}</div>
-                <div className="flex flex-wrap gap-4 mt-3 text-sm text-ink-dim">
-                  <span className="flex items-center gap-1"><Calendar size={12} className="text-gold" />{formatDateLong(new Date(b.date))}</span>
-                  <span className="flex items-center gap-1"><Clock size={12} className="text-gold" />{b.timeSlot} · {b.serviceDuration} min</span>
-                  {b.address && <span className="flex items-center gap-1"><MapPin size={12} className="text-gold" />{b.address}</span>}
-                </div>
-                {b.rejectionReason && <div className="text-xs text-rose mt-2 italic">Rejection reason: {b.rejectionReason}</div>}
-              </div>
-              <div className="text-right">
-                <div className="font-display text-2xl text-gradient-rose">{formatPrice(b.totalPrice)}</div>
-              </div>
-            </div>
+            <BookingRow key={b.id} booking={b} />
           ))}
         </div>
       )}
     </motion.div>
   );
+}
+
+// 10-Jul tracker items 5 / 6 / 8: each accepted booking now shows
+// the confirmed end time next to the arrival, plus artist-side
+// controls to edit the start / end time or delete the booking
+// entirely. Deletion cancels the row (soft) so the slot frees up
+// on the customer picker + admin log stays intact.
+function BookingRow({ booking: b }: { booking: Booking }) {
+  const router = useRouter();
+  const [mode, setMode] = useState<"idle" | "editing" | "loading">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  const durationMin = b.durationMinutes ?? b.serviceDuration ?? 240;
+  const startLabel = b.timeSlot;
+  const endLabel = addMinutesToHHMM(b.timeSlot, durationMin);
+
+  const [draftStart, setDraftStart] = useState(startLabel);
+  const [draftEnd, setDraftEnd] = useState(endLabel);
+
+  const isAccepted = b.status === "accepted";
+
+  async function saveTimes() {
+    const durationMinutes = diffMinutesHHMM(draftStart, draftEnd);
+    if (durationMinutes <= 0) {
+      setError("End time must be after start time.");
+      return;
+    }
+    setMode("loading"); setError(null);
+    try {
+      const res = await fetch(`/api/bookings/${b.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reschedule", timeSlot: draftStart, durationMinutes }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Failed to save");
+      router.refresh();
+      setMode("idle");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+      setMode("editing");
+    }
+  }
+
+  async function deleteBooking() {
+    if (!confirm("Delete this booking? The customer will be notified.")) return;
+    setMode("loading"); setError(null);
+    try {
+      const res = await fetch(`/api/bookings/${b.id}`, { method: "DELETE" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Delete failed");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+      setMode("idle");
+    }
+  }
+
+  return (
+    <div className="glass rounded-2xl p-5 grid lg:grid-cols-[1fr_auto] gap-4">
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="chip">{b.serviceCategory}</span>
+          <StatusPill status={b.status} />
+        </div>
+        <div className="font-semibold text-lg">{b.eventName ?? b.serviceName}</div>
+        <div className="text-sm text-ink-dim mt-0.5">{b.customerName}{b.customerPhone ? ` · ${b.customerPhone}` : ""}</div>
+        <div className="flex flex-wrap gap-4 mt-3 text-sm text-ink-dim">
+          <span className="flex items-center gap-1"><Calendar size={12} className="text-gold" />{formatDateLong(new Date(b.date))}</span>
+          <span className="flex items-center gap-1">
+            <Clock size={12} className="text-gold" />
+            {startLabel}<span className="text-gold mx-1">→</span>{endLabel}
+            <span className="text-ink-dim/60 ml-1">· {fmtDurationLabel(durationMin)}</span>
+          </span>
+          {b.address && <span className="flex items-center gap-1"><MapPin size={12} className="text-gold" />{b.address}</span>}
+        </div>
+        {b.rejectionReason && <div className="text-xs text-rose mt-2 italic">Rejection reason: {b.rejectionReason}</div>}
+
+        {(mode === "editing" || mode === "loading") && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2">Edit timing</div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-widest text-ink-dim block mb-1">Start</span>
+                <input
+                  type="time"
+                  value={draftStart}
+                  onChange={(e) => setDraftStart(e.target.value)}
+                  step={300}
+                  className="dash-input"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-widest text-ink-dim block mb-1">End</span>
+                <input
+                  type="time"
+                  value={draftEnd}
+                  onChange={(e) => setDraftEnd(e.target.value)}
+                  step={300}
+                  className="dash-input"
+                />
+              </label>
+            </div>
+            {error && <div className="text-xs text-rose mt-2">{error}</div>}
+            <div className="flex gap-2 justify-end mt-3">
+              <button onClick={() => { setMode("idle"); setError(null); setDraftStart(startLabel); setDraftEnd(endLabel); }} className="btn-ghost text-xs py-2 px-3">Cancel</button>
+              <button onClick={saveTimes} className="btn-primary text-xs py-2 px-3">
+                {mode === "loading" ? <Loader2 className="animate-spin" size={12} /> : <><Check size={12} /> Save</>}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col items-end gap-3">
+        <div className="font-display text-2xl text-gradient-rose">{formatPrice(b.totalPrice)}</div>
+        {isAccepted && mode !== "editing" && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setMode("editing")}
+              className="btn-ghost text-xs py-1.5 px-3"
+              title="Edit start / end time"
+            >
+              <Edit3 size={11} /> Time
+            </button>
+            <button
+              onClick={deleteBooking}
+              className="btn-ghost text-xs py-1.5 px-3 text-rose border-rose/40 hover:bg-rose/10"
+              title="Delete this booking"
+            >
+              <Trash2 size={11} /> Delete
+            </button>
+          </div>
+        )}
+        {mode !== "editing" && error && <div className="text-xs text-rose">{error}</div>}
+      </div>
+    </div>
+  );
+}
+
+function addMinutesToHHMM(hhmm: string, mins: number): string {
+  const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
+  const total = (Number.isNaN(h) ? 0 : h) * 60 + (Number.isNaN(m) ? 0 : m) + mins;
+  const wrapped = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(wrapped / 60)).padStart(2, "0")}:${String(wrapped % 60).padStart(2, "0")}`;
+}
+
+function diffMinutesHHMM(startHM: string, endHM: string): number {
+  const [sH, sM] = startHM.split(":").map((n) => parseInt(n, 10));
+  const [eH, eM] = endHM.split(":").map((n) => parseInt(n, 10));
+  const s = sH * 60 + sM;
+  let e = eH * 60 + eM;
+  if (e <= s) e += 24 * 60; // spans midnight
+  return e - s;
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -1778,9 +1920,18 @@ function ProfileTab({ artist, userId }: { artist: Artist; userId: string }) {
                 />
               </FieldCard>
 
-              <FieldCard title="Experience" icon={Award}>
-                <ModalField label="Summary">
-                  <textarea rows={4} value={form.experienceSummary} onChange={(e) => setForm({...form, experienceSummary: e.target.value})} placeholder="Training, notable clients, awards…" className="dash-input resize-none" />
+              {/* 10-Jul tracker item 10: the freeform Experience summary
+                  moved into the About tab; this field is now a compact
+                  "Certified from — <academy name>" so the training
+                  credential surfaces on the public profile at a glance. */}
+              <FieldCard title="Certified from" icon={Award}>
+                <ModalField label="Academy / mentor name">
+                  <input
+                    value={form.certifiedFrom}
+                    onChange={(e) => setForm({ ...form, certifiedFrom: e.target.value })}
+                    placeholder="e.g. Lakmé Academy — Bengaluru"
+                    className="dash-input"
+                  />
                 </ModalField>
               </FieldCard>
 

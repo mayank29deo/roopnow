@@ -7,7 +7,10 @@ import {
   notifyBookingCancelledByCustomer,
 } from "@/lib/notify";
 
-// Customer cancels their own pending/accepted booking.
+// Customer OR artist cancels a booking. Customer can only cancel
+// their own; artist can only cancel bookings on their own artist row.
+// Both paths write status = cancelled (soft delete) so the admin log
+// + audit trail stay intact.
 export async function DELETE(
   _: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,10 +22,12 @@ export async function DELETE(
   const supabase = await createClient();
   const { data: existing } = await supabase
     .from("bookings")
-    .select("user_id, status")
+    .select("user_id, artist_id, status")
     .eq("id", id)
     .maybeSingle();
-  if (!existing || existing.user_id !== user.id) {
+  const isOwner = !!existing && existing.user_id === user.id;
+  const isArtist = !!existing && user.role === "artist" && !!user.artistId && existing.artist_id === user.artistId;
+  if (!existing || (!isOwner && !isArtist)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   // Only notify if the slot was actually held — silent if it was already
@@ -36,7 +41,7 @@ export async function DELETE(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  if (wasLive) {
+  if (wasLive && isOwner) {
     // after() keeps the promise alive past the response — a bare
     // fire-and-forget promise was being killed by the serverless
     // runtime and Resend never got the request.
@@ -45,6 +50,9 @@ export async function DELETE(
       catch (e) { console.error("notify failed:", e); }
     });
   }
+  // Artist-side cancellation notification for the customer is a
+  // separate template (not implemented yet); admin still sees it via
+  // the audit log so this is safe as-is.
   return NextResponse.json({ ok: true });
 }
 
@@ -54,10 +62,14 @@ export async function DELETE(
 // be tied up (travel out + service + travel back). Stored on
 // bookings.duration_minutes so the overlap check + customer date
 // picker both see the true block window.
+// 10-Jul tracker item 5: reschedule action lets the artist re-set
+// the time_slot + duration_minutes on an already-accepted booking
+// without changing status.
 const patchSchema = z.object({
-  action: z.enum(["accept", "reject", "complete"]),
+  action: z.enum(["accept", "reject", "complete", "reschedule"]),
   reason: z.string().optional(),
   durationMinutes: z.number().int().positive().max(1440).optional(),
+  timeSlot: z.string().regex(/^\d{2}:\d{2}$/).optional(),
 });
 
 export async function PATCH(
@@ -93,16 +105,19 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Build the update payload — duration_minutes is only touched on
-  // accept, and only when the artist explicitly sent one. Silence
-  // means keep whatever's already on the row (usually the 4h default
-  // written at request time).
-  const update: Record<string, unknown> = {
-    status: statusMap[body.action],
-    rejection_reason: body.action === "reject" ? body.reason : null,
-  };
-  if (body.action === "accept" && typeof body.durationMinutes === "number") {
+  // Build the update payload:
+  // - accept / reject / complete: flip status + write duration if provided
+  // - reschedule: leave status alone, just update time_slot + duration
+  const update: Record<string, unknown> = {};
+  if (body.action !== "reschedule") {
+    update.status = statusMap[body.action as "accept" | "reject" | "complete"];
+    update.rejection_reason = body.action === "reject" ? body.reason : null;
+  }
+  if ((body.action === "accept" || body.action === "reschedule") && typeof body.durationMinutes === "number") {
     update.duration_minutes = body.durationMinutes;
+  }
+  if (body.action === "reschedule" && typeof body.timeSlot === "string") {
+    update.time_slot = body.timeSlot;
   }
 
   const { data, error } = await supabase
@@ -127,6 +142,9 @@ export async function PATCH(
       catch (e) { console.error("notify failed:", e); }
     });
   }
+  // No email on reschedule for now — customer already reads new
+  // times from their dashboard; adding a template + email fanout
+  // when Suraksha asks for one is a follow-up.
 
   return NextResponse.json({ ok: true, booking: data });
 }

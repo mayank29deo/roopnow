@@ -26,6 +26,10 @@ type RawArtistWithRelations = {
   payment_notes?: string;
   trial_service_offered?: boolean;
   trial_service_description?: string;
+  certified_from?: string;
+  max_bookings_per_day?: number;
+  travel_radius_km?: number;
+  cancellation_policy?: string;
   years_exp?: number;
   instagram?: string | null;
   verified: boolean;
@@ -97,6 +101,10 @@ export function toProfileArtist(a: RawArtistWithRelations) {
     paymentNotes: a.payment_notes ?? "",
     trialServiceOffered: a.trial_service_offered ?? false,
     trialServiceDescription: a.trial_service_description ?? "",
+    certifiedFrom: a.certified_from ?? "",
+    maxBookingsPerDay: a.max_bookings_per_day ?? 3,
+    travelRadiusKm: a.travel_radius_km ?? 0,
+    cancellationPolicy: a.cancellation_policy ?? "",
     yearsExp: a.years_exp ?? 0,
     instagram: a.instagram ?? null,
     verified: a.verified,

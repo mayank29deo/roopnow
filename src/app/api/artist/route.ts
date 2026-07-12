@@ -28,6 +28,7 @@ export async function PATCH(req: NextRequest) {
       years_exp: body.yearsExp,
       instagram: body.instagram || null,
       experience_summary: body.experienceSummary ?? "",
+      certified_from: body.certifiedFrom ?? "",
       travel_radius_km: body.travelRadiusKm ?? 0,
       service_mode: allowedServiceMode.has(body.serviceMode) ? body.serviceMode : "studio",
       artist_type: allowedArtistType.has(body.artistType) ? body.artistType : "solo",

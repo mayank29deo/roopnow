@@ -160,6 +160,12 @@ alter table public.bookings add column if not exists duration_minutes int;
 -- Menu tab (per-service `trial_makeup_available` still exists for
 -- granularity).
 alter table public.artists add column if not exists trial_service_offered boolean not null default false;
+
+-- 10-Jul tracker item 10: single-line "Certified from" replaces the
+-- experience-summary blurb in the dashboard. The About tab already
+-- covers the artist's story; this is just the training / academy
+-- name shown on the public profile.
+alter table public.artists add column if not exists certified_from text not null default '';
 alter table public.artists add column if not exists trial_service_description text not null default '';
 alter table public.bookings drop constraint if exists bookings_status_check;
 alter table public.bookings add constraint bookings_status_check

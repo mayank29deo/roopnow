@@ -23,6 +23,31 @@ import {
 // double-booking.
 const DEFAULT_DURATION_MINUTES = 240;
 
+type ScheduledSlot = import("@/lib/availability").ScheduledSlot;
+
+// Client-side twin of the server's overlap check. Returns the
+// conflicting slot if the arrival + 4-hour window overlaps it, or
+// null if the timing is clean.
+function findOverlap(
+  date: Date,
+  arrival: string,
+  availability: AvailabilityInput,
+): ScheduledSlot | null {
+  const scheduled = availability.slotsByDay[isoDay(date)] ?? [];
+  if (scheduled.length === 0) return null;
+  const [aH, aM] = arrival.split(":").map((n) => parseInt(n, 10));
+  const newStart = aH * 60 + aM;
+  const newEnd = newStart + DEFAULT_DURATION_MINUTES;
+  for (const s of scheduled) {
+    const [sH, sM] = s.startTime.split(":").map((n) => parseInt(n, 10));
+    const [eH, eM] = s.endTime.split(":").map((n) => parseInt(n, 10));
+    const sStart = sH * 60 + sM;
+    const sEnd = eH * 60 + eM;
+    if (newStart < sEnd && newEnd > sStart) return s;
+  }
+  return null;
+}
+
 type Service = {
   id: string; name: string;
   description: string;
@@ -143,7 +168,15 @@ export function BookingDrawer({
     availability.blockedDays.has(isoDay(date)) ||
     (availability.bookingsByDay[isoDay(date)] ?? 0) + (availability.eventsByDay[isoDay(date)] ?? 0) >= availability.fullDayLimit
   );
-  const canContinueStep2 = !!date && !!slot && !pickedDateBlocked;
+
+  // 10-Jul tracker items 3 + 7: client-side overlap warning. Server
+  // still rejects with a 409, but this pops the warning before the
+  // customer even hits Continue so they don't wait to find out.
+  // Walks the tapped date's existing scheduled slots (confirmed +
+  // tentative + artist events) and checks the customer's default
+  // 4-hour arrival window against each.
+  const overlapConflict = !!date && !!slot ? findOverlap(date, slot, availability) : null;
+  const canContinueStep2 = !!date && !!slot && !pickedDateBlocked && !overlapConflict;
   const canSubmit = !!(address && eventName && phone);
 
   return (
@@ -270,6 +303,22 @@ export function BookingDrawer({
                         arrivalTime={slot}
                         onArrivalChange={setSlot}
                       />
+                      {/* 10-Jul items 3+7: warn the customer at step
+                          2 before they hit Continue if their arrival
+                          + 4h window overlaps an existing scheduled
+                          slot. Server still returns 409 as a fallback
+                          but this catches the miss up-front. */}
+                      {overlapConflict && (
+                        <div className="rounded-2xl border border-rose/40 bg-rose/5 p-4 text-sm">
+                          <div className="font-medium text-rose mb-1">This overlaps an existing booking.</div>
+                          <p className="text-ink-dim leading-relaxed">
+                            The artist is already {overlapConflict.kind === "confirmed" ? "booked" : "tentatively held"}
+                            {" "}
+                            from <strong>{formatTime(overlapConflict.startTime)}</strong> to <strong>{formatTime(overlapConflict.endTime)}</strong>.
+                            Please pick a time after <strong>{formatTime(overlapConflict.endTime)}</strong> or another day.
+                          </p>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </div>
@@ -536,7 +585,7 @@ function DatePicker({
               </span>
               <span className="ml-1">&mdash; another customer has requested this time and it&rsquo;s awaiting the artist&rsquo;s response.</span>
             </span>
-            <span className="block mt-1 italic">Picking an overlapping arrival time will be blocked before the request is sent.</span>
+            <span className="block mt-1 italic">Picking an overlapping time slot will be blocked before the request is sent.</span>
           </p>
           <div className="space-y-2">
             {slots

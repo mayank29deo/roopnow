@@ -7,6 +7,7 @@ import {
   Star, MapPin, Instagram, BadgeCheck, Award, ArrowLeft,
   Clock, Sparkles, X, ChevronLeft, ChevronRight, Share2, Heart,
   Users, Palette, Plane, IndianRupee, FileText, CreditCard,
+  Compass, ScrollText,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { BookingDrawer } from "./BookingDrawer";
@@ -38,6 +39,10 @@ type Artist = {
   paymentNotes: string;
   trialServiceOffered: boolean;
   trialServiceDescription: string;
+  certifiedFrom: string;
+  maxBookingsPerDay: number;
+  travelRadiusKm: number;
+  cancellationPolicy: string;
   yearsExp: number;
   instagram: string | null;
   verified: boolean;
@@ -564,6 +569,32 @@ function ProfessionalDetailsBlock({ artist }: { artist: Artist }) {
         <DetailCard icon={MapPin} label="Service mode" value={serviceModeLabel} />
       </div>
 
+      {/* 10-Jul tracker item 10: Certified from — a compact training
+          credential shown when the artist filled it in. */}
+      {artist.certifiedFrom.trim() && (
+        <div className="mb-4">
+          <DetailCard icon={Award} label="Certified from" value={`— ${artist.certifiedFrom}`} />
+        </div>
+      )}
+
+      {/* 10-Jul tracker item 9: Capacity & reach — max bookings per
+          day + travel radius. Only rendered when the artist set them
+          to non-defaults so a blank studio doesn't broadcast "0 km". */}
+      {(artist.maxBookingsPerDay > 0 || artist.travelRadiusKm > 0) && (
+        <div className="grid sm:grid-cols-2 gap-4 mb-4">
+          {artist.maxBookingsPerDay > 0 && (
+            <DetailCard
+              icon={Clock}
+              label="Max bookings per day"
+              value={`${artist.maxBookingsPerDay} ${artist.maxBookingsPerDay === 1 ? "booking" : "bookings"}`}
+            />
+          )}
+          {artist.travelRadiusKm > 0 && (
+            <DetailCard icon={Compass} label="Travel radius" value={`${artist.travelRadiusKm} km`} />
+          )}
+        </div>
+      )}
+
       {brands.length > 0 && (
         <DetailPanel icon={Palette} label="Cosmetic brands used">
           <div className="flex flex-wrap gap-2">
@@ -627,6 +658,21 @@ function ProfessionalDetailsBlock({ artist }: { artist: Artist }) {
               <p className="text-ink text-lg whitespace-pre-wrap leading-relaxed">{artist.paymentNotes}</p>
             </DetailPanel>
           )}
+        </div>
+      )}
+
+      {/* 10-Jul tracker item 11: Cancellation policy on the public
+          profile. Rendered only when the artist filled it in — a blank
+          policy paragraph reads badly. */}
+      {artist.cancellationPolicy.trim() && (
+        <div className="mt-10">
+          <div className="flex items-center gap-3 mb-5">
+            <IconBadge icon={ScrollText} />
+            <h4 className="font-editorial text-3xl text-gold tracking-tight">Cancellation policy</h4>
+          </div>
+          <DetailPanel icon={ScrollText} label="What happens if you cancel">
+            <p className="text-ink text-lg whitespace-pre-wrap leading-relaxed">{artist.cancellationPolicy}</p>
+          </DetailPanel>
         </div>
       )}
     </section>

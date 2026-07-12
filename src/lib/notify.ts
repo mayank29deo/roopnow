@@ -598,7 +598,7 @@ export async function notifyBookingDecided(
           framedContent: true,
           preheader: `${artistName} has confirmed your booking.`,
           title: `${customerFirst}.`,
-          intro: `It&rsquo;s happening. Your artist has <strong>confirmed</strong> your booking.<br/><br/>They&rsquo;ll reach out directly &mdash; expect a message soon to sort details, prep, and payments.<br/><br/><em>The glam is officially on.</em>`,
+          intro: `It&rsquo;s happening. Your artist has <strong>confirmed</strong> your booking.<br/><br/>They&rsquo;ll reach out directly &mdash; expect a message soon to sort details, prep, and payments.<br/><br/><em>The glam is officially on.</em><br/><br/><span style="font-size:11px;">Wanted to remind you that ROOP is not responsible for the quality of the output by the Artist.</span>`,
           ctas: [{ label: "View booking", url: `${SITE_URL}/dashboard`, primary: true }],
         }),
       });
