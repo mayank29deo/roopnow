@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, ChevronLeft, ChevronRight, Check, Clock, Calendar,
   Sparkles, Loader2, MapPin, LogIn, Users, PartyPopper, Phone,
+  MousePointerClick,
 } from "lucide-react";
 import { formatPrice, formatDateLong } from "@/lib/utils";
 import { format } from "date-fns";
@@ -614,18 +615,29 @@ function DatePicker({
           <span className="w-1 h-1 rounded-full bg-gold" />
           Your arrival time
         </div>
-        <div className="rounded-2xl border border-border bg-surface/40 p-4">
-          <label className="block">
+        {/* 13-Jul: a bare <input type=time> shows only "--:--" when
+            empty and three separate users told Suraksha they weren't
+            sure what to do. The `label` wraps everything and the
+            surrounding div gets a subtle gold outline + hover so the
+            whole tile reads as tappable; a pulsing "Tap here to enter
+            time" hint sits below the field until a value is picked. */}
+        <div className="rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/10 to-transparent p-4 hover:border-gold transition-colors">
+          <label className="block cursor-pointer">
             <span className="text-[10px] uppercase tracking-widest text-ink-dim block mb-1.5">Artist should arrive at</span>
             <input
               type="time"
               value={arrivalTime ?? ""}
               onChange={(e) => onArrivalChange(e.target.value)}
               step={300}
-              className="w-full text-2xl font-display bg-transparent border-0 focus:outline-none text-gold py-1"
+              className="w-full text-2xl font-display bg-transparent border-0 focus:outline-none text-gold py-1 cursor-pointer"
             />
-            {arrivalTime && (
+            {arrivalTime ? (
               <div className="text-sm text-ink-dim mt-1">{formatTime(arrivalTime)}</div>
+            ) : (
+              <div className="text-sm text-gold mt-1 flex items-center gap-1.5 font-medium">
+                <MousePointerClick size={13} className="animate-pulse" />
+                Tap here to enter time
+              </div>
             )}
           </label>
         </div>
