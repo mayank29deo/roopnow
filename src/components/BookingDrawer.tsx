@@ -26,8 +26,11 @@ const DEFAULT_DURATION_MINUTES = 240;
 type ScheduledSlot = import("@/lib/availability").ScheduledSlot;
 
 // Client-side twin of the server's overlap check. Returns the
-// conflicting slot if the arrival + 4-hour window overlaps it, or
-// null if the timing is clean.
+// conflicting slot if the arrival TIME POINT falls inside an
+// existing scheduled window, or null if the timing is clean.
+// 12-Jul: relaxed from the naive 4h-projection check — arriving at
+// 1 PM when another booking is 4:31-8:31 PM should be allowed since
+// the artist confirms the real duration at accept-time.
 function findOverlap(
   date: Date,
   arrival: string,
@@ -37,13 +40,12 @@ function findOverlap(
   if (scheduled.length === 0) return null;
   const [aH, aM] = arrival.split(":").map((n) => parseInt(n, 10));
   const newStart = aH * 60 + aM;
-  const newEnd = newStart + DEFAULT_DURATION_MINUTES;
   for (const s of scheduled) {
     const [sH, sM] = s.startTime.split(":").map((n) => parseInt(n, 10));
     const [eH, eM] = s.endTime.split(":").map((n) => parseInt(n, 10));
     const sStart = sH * 60 + sM;
     const sEnd = eH * 60 + eM;
-    if (newStart < sEnd && newEnd > sStart) return s;
+    if (newStart >= sStart && newStart < sEnd) return s;
   }
   return null;
 }

@@ -63,10 +63,17 @@ export async function POST(req: NextRequest) {
     // setHours(0)` was falling back to UTC-midnight boundaries which
     // straddle IST midnight — so half of a real IST day slipped out
     // of the overlap query and let colliding bookings through.
-    const newDurationMin = data.durationMinutes ?? 240;
+    //
+    // 12-Jul (v2): overlap is now checked against the arrival TIME
+    // POINT, not the customer's default 4-hour projection. Suraksha's
+    // model: the customer just wants to arrive at a free moment — the
+    // artist chooses the real block duration at accept-time
+    // (ConfirmBlockPanel). Blocking a 1 PM arrival because it would
+    // "collide" with a 4:31 PM booking's start via the naive 4h
+    // window was too aggressive — the artist would actually be done
+    // in ~1h and the customer got a needless rejection.
     const [arrH, arrM] = arrival.split(":").map((n) => parseInt(n, 10));
     const newStart = arrH * 60 + arrM;
-    const newEnd = newStart + newDurationMin;
     const dayKey = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Kolkata",
       year: "numeric", month: "2-digit", day: "2-digit",
@@ -95,9 +102,10 @@ export async function POST(req: NextRequest) {
       const svc = Array.isArray(b.services) ? b.services[0] : b.services;
       const bDur = b.duration_minutes ?? svc?.duration ?? 240;
       const bEnd = bStart + bDur;
-      // Half-open overlap: [newStart, newEnd) ∩ [bStart, bEnd) is
-      // non-empty iff newStart < bEnd AND newEnd > bStart.
-      if (newStart < bEnd && newEnd > bStart) {
+      // Reject only when the new arrival time itself falls INSIDE the
+      // existing window [bStart, bEnd). Arriving before bStart is
+      // fine — the artist will decide their own duration on accept.
+      if (newStart >= bStart && newStart < bEnd) {
         // 10-Jul: return the exact busy range + earliest free time so
         // the customer sees "6:00 AM – 10:00 AM, try after 10:00 AM"
         // instead of a generic collision.
