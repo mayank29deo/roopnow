@@ -39,6 +39,19 @@ export default async function ArtistPage({
 
   try {
     const supabase = await createClient();
+    // 12-Jul: bookings RLS restricts SELECT to the customer who
+    // booked or the artist. Every OTHER visitor gets zero rows,
+    // which was painting the artist's calendar green on the public
+    // profile — the "leak" Suraksha's friend reported. Occupancy is
+    // supposed to be visible to everyone (that's how a customer
+    // decides whether to book a slot).
+    //
+    // We fetch bookings via the service-role admin client and slim
+    // the column list to occupancy-only fields — no customer PII
+    // ever leaves this page's server context. Every other query
+    // stays on the auth'd client since those tables already have
+    // public read policies.
+    const adminForCal = createAdminClient();
     const [artistRes, reviewsRes, bookingsRes, eventsRes, blocksRes, chargesRes] = await Promise.all([
       supabase
         .from("artists")
@@ -50,7 +63,7 @@ export default async function ArtistPage({
         .select("id, rating, comment, created_at, profiles(name)")
         .eq("artist_id", id)
         .order("created_at", { ascending: false }),
-      supabase
+      adminForCal
         .from("bookings")
         .select("date, status, time_slot, duration_minutes, services(duration)")
         .eq("artist_id", id),
