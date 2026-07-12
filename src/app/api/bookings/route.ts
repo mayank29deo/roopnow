@@ -57,18 +57,28 @@ export async function POST(req: NextRequest) {
     // 7-Jul tracker item 7: reject the request if the requested slot
     // overlaps any active (pending or accepted) booking on the same
     // date. We check the day window ± existing bookings' [start, end).
+    //
+    // 12-Jul: "same date" is the customer's IST calendar day, not the
+    // process's local calendar day. On Vercel (UTC) `new Date(...).
+    // setHours(0)` was falling back to UTC-midnight boundaries which
+    // straddle IST midnight — so half of a real IST day slipped out
+    // of the overlap query and let colliding bookings through.
     const newDurationMin = data.durationMinutes ?? 240;
     const [arrH, arrM] = arrival.split(":").map((n) => parseInt(n, 10));
     const newStart = arrH * 60 + arrM;
     const newEnd = newStart + newDurationMin;
-    const dayStart = new Date(data.date); dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);
+    const dayKey = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date(data.date));
+    const istDayStart = new Date(`${dayKey}T00:00:00+05:30`);
+    const istDayEnd = new Date(istDayStart.getTime() + 24 * 60 * 60 * 1000);
     const { data: sameDay } = await supabase
       .from("bookings")
       .select("time_slot, duration_minutes, services(duration)")
       .eq("artist_id", data.artistId)
-      .gte("date", dayStart.toISOString())
-      .lt("date", dayEnd.toISOString())
+      .gte("date", istDayStart.toISOString())
+      .lt("date", istDayEnd.toISOString())
       .in("status", ["pending", "accepted"]);
     // The Supabase JS client types the foreign-key relation as
     // `services: { duration }[]` even when the relationship is a

@@ -96,6 +96,14 @@ export function BookingDrawer({
     if (!service || !date || !slot || !eventName || !address || !phone) return;
     setLoading(true);
     setError(null);
+    // 12-Jul: send the date anchored to IST midnight so it lands on
+    // the day the customer actually picked. date.toISOString() would
+    // shift a midnight-IST value to 18:30 UTC of the previous day —
+    // which on Vercel (UTC) then rendered as d-1 everywhere.
+    const y = date.getFullYear();
+    const mo = String(date.getMonth() + 1).padStart(2, "0");
+    const da = String(date.getDate()).padStart(2, "0");
+    const istIsoDate = `${y}-${mo}-${da}T00:00:00+05:30`;
     try {
       const res = await fetch("/api/bookings", {
         method: "POST",
@@ -103,7 +111,7 @@ export function BookingDrawer({
         body: JSON.stringify({
           artistId: artist.id,
           serviceId: service.id,
-          date: date.toISOString(),
+          date: istIsoDate,
           arrivalTime: slot,
           durationMinutes: DEFAULT_DURATION_MINUTES,
           eventName,

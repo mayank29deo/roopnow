@@ -69,12 +69,22 @@ export function statusForDay(day: string, input: AvailabilityInput): DayStatus {
   return "green";
 }
 
+// 12-Jul: bucket every timestamp by its IST calendar day, not the
+// process's local day. On Vercel (UTC) a booking stored as
+// 2026-07-09T18:30:00Z (= midnight IST on the 10th) was being
+// grouped under "2026-07-09" using .getDate() — so the slotsByDay
+// map + calendar tile counts fell on the wrong day. en-CA is the
+// standard trick to get a YYYY-MM-DD out of Intl in one call.
+const IST_DAY_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 export function isoDay(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return IST_DAY_FORMATTER.format(date);
 }
 
 export function isUnbookable(day: string, input: AvailabilityInput): boolean {
