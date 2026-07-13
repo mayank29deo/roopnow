@@ -105,10 +105,11 @@ export function ArtistDashboardClient({
 }) {
   const [tab, setTab] = useState<Tab>("overview");
   const pendingRequests = bookings.filter((b) => b.status === "pending");
-  const upcoming = bookings.filter((b) => {
-    if (b.status !== "accepted") return false;
-    return new Date(b.date) >= new Date();
-  });
+  // 13-Jul: soonest first for Next Up in Overview. Dashboard page
+  // fetches bookings ordered desc, so we resort ascending here.
+  const upcoming = bookings
+    .filter((b) => b.status === "accepted" && new Date(b.date) >= new Date())
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard; badge?: number }[] = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -472,7 +473,9 @@ const DURATION_PRESETS: { label: string; minutes: number }[] = [
   { label: "4 hrs", minutes: 240 },
   { label: "5 hrs", minutes: 300 },
   { label: "6 hrs", minutes: 360 },
-  { label: "All day", minutes: 720 },
+  // 13-Jul: append the hours in brackets so the artist isn't left
+  // guessing how long "All day" means for the block calculation.
+  { label: "All day (12 hrs)", minutes: 720 },
 ];
 
 function ConfirmBlockPanel({
@@ -583,7 +586,7 @@ function fmtHMMachine(totalMinutes: number): string {
 }
 
 function fmtDurationLabel(minutes: number): string {
-  if (minutes === 720) return "All day";
+  if (minutes === 720) return "All day (12 hrs)";
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (m === 0) return `${h} hr${h === 1 ? "" : "s"}`;
@@ -595,7 +598,12 @@ function fmtDurationLabel(minutes: number): string {
 // ============================================================
 function BookingsTab({ bookings }: { bookings: Booking[] }) {
   const [filter, setFilter] = useState<"all" | "accepted" | "completed" | "cancelled" | "rejected">("accepted");
-  const filtered = bookings.filter((b) => filter === "all" || b.status === filter);
+  // 13-Jul: sort ascending by date so upcoming work naturally sits
+  // at the top of the list — same reasoning as the Overview page.
+  const filtered = bookings
+    .filter((b) => filter === "all" || b.status === filter)
+    .slice()
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
       <div className="flex flex-wrap gap-2 mb-6">
@@ -696,7 +704,7 @@ function BookingRow({ booking: b }: { booking: Booking }) {
           <span className="flex items-center gap-1">
             <Clock size={12} className="text-gold" />
             {startLabel}<span className="text-gold mx-1">→</span>{endLabel}
-            <span className="text-ink-dim/60 ml-1">· {fmtDurationLabel(durationMin)}</span>
+            <span className="ml-1">· {fmtDurationLabel(durationMin)}</span>
           </span>
           {b.address && <span className="flex items-center gap-1"><MapPin size={12} className="text-gold" />{b.address}</span>}
         </div>

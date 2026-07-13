@@ -173,6 +173,17 @@ export function ArtistProfile({
                 )}
               </div>
 
+              {/* 13-Jul tracker item 1: Certified From surfaces here
+                  right below the years-experience line so the training
+                  credential is visible on the header without opening
+                  the About tab. */}
+              {artist.certifiedFrom.trim() && (
+                <div className="mt-2 flex items-center gap-1.5 text-sm text-ink-dim">
+                  <Award size={14} className="text-gold" />
+                  <span>Certified from &mdash; <span className="text-ink font-medium">{artist.certifiedFrom}</span></span>
+                </div>
+              )}
+
               {/* Skills heading — matches the Skin Tone Expertise pattern
                   per client item #13. */}
               {specialties.length > 0 && (
@@ -569,13 +580,9 @@ function ProfessionalDetailsBlock({ artist }: { artist: Artist }) {
         <DetailCard icon={MapPin} label="Service mode" value={serviceModeLabel} />
       </div>
 
-      {/* 10-Jul tracker item 10: Certified from — a compact training
-          credential shown when the artist filled it in. */}
-      {artist.certifiedFrom.trim() && (
-        <div className="mb-4">
-          <DetailCard icon={Award} label="Certified from" value={`— ${artist.certifiedFrom}`} />
-        </div>
-      )}
+      {/* 13-Jul tracker item 1: Certified From moved into the profile
+          header (right under "N years experience"). The DetailCard
+          that used to live here is gone to avoid duplication. */}
 
       {/* 10-Jul tracker item 9: Capacity & reach — max bookings per
           day + travel radius. Only rendered when the artist set them

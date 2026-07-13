@@ -87,6 +87,20 @@ export function isoDay(d: Date | string): string {
   return IST_DAY_FORMATTER.format(date);
 }
 
+// Add / subtract whole days from a YYYY-MM-DD string using UTC math
+// (which is safe here because we're only doing Y/M/D arithmetic —
+// no time-of-day involved). Used by buildAvailability to spill a
+// midnight-crossing booking onto the following calendar day.
+export function addDaysToIsoDay(isoDayStr: string, days: number): string {
+  const [y, m, d] = isoDayStr.split("-").map((n) => parseInt(n, 10));
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
 export function isUnbookable(day: string, input: AvailabilityInput): boolean {
   return statusForDay(day, input) === "red";
 }
@@ -222,12 +236,39 @@ export function buildAvailability(
       const durMin = b.duration_minutes ?? b.services?.duration ?? 180;
       const endMin = startMin + durMin;
       const kind: SlotKind = b.status === "accepted" ? "confirmed" : "tentative";
-      (slotsByDay[key] ??= []).push({
-        startTime: b.time_slot,
-        endTime: fromMinutes(endMin),
-        kind,
-        label: kind === "confirmed" ? "Confirmed booking" : "Tentatively held",
-      });
+      const baseLabel = kind === "confirmed" ? "Confirmed booking" : "Tentatively held";
+
+      // 13-Jul tracker item 2b: a booking that starts before midnight
+      // and runs into the following day used to store a wrap-around
+      // endTime like "04:30" on the SAME day — which reads as an
+      // impossibly early end and left the next day showing as green
+      // even though the artist was still on the job.
+      // Fix: split into two slots (yesterday-through-midnight +
+      // midnight-through-real-end) and bump bookingsByDay for the
+      // next day so the calendar tile turns yellow as well.
+      if (endMin > 24 * 60) {
+        (slotsByDay[key] ??= []).push({
+          startTime: b.time_slot,
+          endTime: "23:59",
+          kind,
+          label: baseLabel,
+        });
+        const nextKey = addDaysToIsoDay(key, 1);
+        bookingsByDay[nextKey] = (bookingsByDay[nextKey] ?? 0) + 1;
+        (slotsByDay[nextKey] ??= []).push({
+          startTime: "00:00",
+          endTime: fromMinutes(endMin - 24 * 60),
+          kind,
+          label: `${baseLabel} (continues from previous day)`,
+        });
+      } else {
+        (slotsByDay[key] ??= []).push({
+          startTime: b.time_slot,
+          endTime: fromMinutes(endMin),
+          kind,
+          label: baseLabel,
+        });
+      }
     }
   }
 
