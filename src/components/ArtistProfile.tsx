@@ -457,20 +457,36 @@ export function ArtistProfile({
                   />
                 )}
 
-                <button
-                  onClick={() => {
-                    if (artist.services.length === 0) return;
-                    if (availabilityDate) startBookingForDate(availabilityDate);
-                    else setBooking(artist.services[0]);
-                  }}
-                  disabled={artist.services.length === 0}
-                  className="btn-primary shine mt-6"
-                >
-                  <Sparkles size={14} />
-                  {availabilityDate
-                    ? `Request booking for ${formatDateShort(availabilityDate)}`
-                    : "Request a booking"}
-                </button>
+                {/* 22-Jul tracker item 2: disable / grey out the
+                    Request-booking button when the selected date is
+                    red. Follows the same "date is blocked" check
+                    the drawer's Continue button uses. */}
+                {(() => {
+                  const key = availabilityDate ? isoDay(availabilityDate) : null;
+                  const isRed = !!key && (
+                    availability.blockedDays.has(key) ||
+                    (availability.bookingsByDay[key] ?? 0) + (availability.eventsByDay[key] ?? 0) >= availability.fullDayLimit
+                  );
+                  const disabled = artist.services.length === 0 || isRed;
+                  const label = isRed
+                    ? "Unavailable on this date"
+                    : availabilityDate
+                      ? `Request booking for ${formatDateShort(availabilityDate)}`
+                      : "Request a booking";
+                  return (
+                    <button
+                      onClick={() => {
+                        if (disabled) return;
+                        if (availabilityDate) startBookingForDate(availabilityDate);
+                        else setBooking(artist.services[0]);
+                      }}
+                      disabled={disabled}
+                      className="btn-primary shine mt-6 disabled:opacity-50 disabled:cursor-not-allowed disabled:shine-off"
+                    >
+                      <Sparkles size={14} /> {label}
+                    </button>
+                  );
+                })()}
               </motion.div>
             )}
 

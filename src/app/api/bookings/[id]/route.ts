@@ -116,7 +116,10 @@ export async function PATCH(
   if ((body.action === "accept" || body.action === "reschedule") && typeof body.durationMinutes === "number") {
     update.duration_minutes = body.durationMinutes;
   }
-  if (body.action === "reschedule" && typeof body.timeSlot === "string") {
+  // 22-Jul: the artist can also nudge the start time at accept-time
+  // through ConfirmBlockPanel — no need to re-open the Bookings tab
+  // and edit twice like before.
+  if ((body.action === "accept" || body.action === "reschedule") && typeof body.timeSlot === "string") {
     update.time_slot = body.timeSlot;
   }
 

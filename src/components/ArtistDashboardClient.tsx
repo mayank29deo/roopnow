@@ -333,10 +333,14 @@ function RequestCard({ booking }: { booking: Booking }) {
   // duration before the booking flips to accepted. Default seeded
   // with whatever's already on the row (usually the 4h default
   // written at request time).
+  // 22-Jul: the artist can also override the start time at accept
+  // time now — Suraksha was previously editing the same booking
+  // twice (once here for end, once in the Bookings tab for start).
   const [mode, setMode] = useState<"idle" | "rejecting" | "confirming" | "loading">("idle");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(240);
+  const [startTime, setStartTime] = useState<string>(booking.timeSlot);
 
   async function submitReject() {
     setMode("loading"); setError(null);
@@ -358,10 +362,17 @@ function RequestCard({ booking }: { booking: Booking }) {
   async function submitAccept() {
     setMode("loading"); setError(null);
     try {
+      // 22-Jul: include timeSlot only when the artist actually
+      // changed it — sending the same string is harmless but the
+      // extra field just noise on the wire.
+      const payload: {
+        action: "accept"; durationMinutes: number; timeSlot?: string;
+      } = { action: "accept", durationMinutes: duration };
+      if (startTime !== booking.timeSlot) payload.timeSlot = startTime;
       const res = await fetch(`/api/bookings/${booking.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "accept", durationMinutes: duration }),
+        body: JSON.stringify(payload),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
@@ -428,7 +439,9 @@ function RequestCard({ booking }: { booking: Booking }) {
           booking={booking}
           duration={duration}
           onDurationChange={setDuration}
-          onCancel={() => { setMode("idle"); setDuration(240); }}
+          startTime={startTime}
+          onStartChange={setStartTime}
+          onCancel={() => { setMode("idle"); setDuration(240); setStartTime(booking.timeSlot); }}
           onConfirm={submitAccept}
           error={error}
         />
@@ -479,19 +492,21 @@ const DURATION_PRESETS: { label: string; minutes: number }[] = [
 ];
 
 function ConfirmBlockPanel({
-  booking, duration, onDurationChange, onCancel, onConfirm, error,
+  booking, duration, onDurationChange, startTime, onStartChange, onCancel, onConfirm, error,
 }: {
   booking: Booking;
   duration: number;
   onDurationChange: (v: number) => void;
+  startTime: string;
+  onStartChange: (v: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
   error: string | null;
 }) {
   // Compute start (HH:MM → minutes) + resulting end for the preview
-  // strip. If timeSlot is anything weird, fall back gracefully so
+  // strip. If startTime is anything weird, fall back gracefully so
   // this UI never explodes on stale data.
-  const [sh, sm] = (booking.timeSlot ?? "00:00").split(":").map((n) => parseInt(n, 10));
+  const [sh, sm] = (startTime ?? "00:00").split(":").map((n) => parseInt(n, 10));
   const startMinutes = (Number.isNaN(sh) ? 0 : sh) * 60 + (Number.isNaN(sm) ? 0 : sm);
   const endMinutes = startMinutes + duration;
   const startLabel = fmtHM(startMinutes);
@@ -507,6 +522,7 @@ function ConfirmBlockPanel({
   }
 
   const customEndValue = fmtHMMachine(endMinutes % (24 * 60));
+  const startChanged = startTime !== booking.timeSlot;
 
   return (
     <div className="mt-5 pt-5 border-t border-border">
@@ -518,6 +534,26 @@ function ConfirmBlockPanel({
         </p>
       </div>
 
+      {/* 22-Jul: start-time picker sits at the top so the artist can
+          override the customer's requested arrival right here — no
+          need to re-open the Bookings tab afterwards to nudge it. */}
+      <label className="block mb-4">
+        <span className="text-[10px] uppercase tracking-widest text-ink-dim block mb-1.5">
+          Starting time {startChanged && <span className="text-gold ml-1">(changed from {booking.timeSlot})</span>}
+        </span>
+        <input
+          type="time"
+          value={startTime}
+          onChange={(e) => onStartChange(e.target.value)}
+          step={300}
+          className="dash-input"
+        />
+        <span className="text-[11px] text-ink-dim mt-1 block">
+          The customer requested {booking.timeSlot}. Change here if you need a different arrival.
+        </span>
+      </label>
+
+      <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2">Block duration</div>
       <div className="flex flex-wrap gap-2 mb-4">
         {DURATION_PRESETS.map((p) => {
           const active = duration === p.minutes;
@@ -806,6 +842,9 @@ function CalendarTab({ availability, blockedDates, events }: {
 }) {
   const [showSchedule, setShowSchedule] = useState(false);
   const [showBlock, setShowBlock] = useState(false);
+  // 22-Jul tracker item 3: mirror the /artists/[id] day-details
+  // panel here — tap a date to inspect the schedule for that day.
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
@@ -826,9 +865,16 @@ function CalendarTab({ availability, blockedDates, events }: {
 
       <div className="grid lg:grid-cols-[1fr_1fr] gap-5">
         <div className="glass rounded-3xl p-6">
-          <AvailabilityCalendar availability={availability} />
+          <AvailabilityCalendar
+            availability={availability}
+            value={selectedDate}
+            onPick={(d) => setSelectedDate(d)}
+          />
         </div>
         <div className="space-y-5">
+          {selectedDate && (
+            <ArtistDayDetails date={selectedDate} availability={availability} />
+          )}
           <ListCard title="Scheduled events" empty="No personal events scheduled." >
             {events.map((e) => <EventRow key={e.id} event={e} />)}
           </ListCard>
@@ -841,6 +887,94 @@ function CalendarTab({ availability, blockedDates, events }: {
       {showSchedule && <ScheduleEventModal onClose={() => setShowSchedule(false)} />}
       {showBlock && <BlockDateModal onClose={() => setShowBlock(false)} />}
     </motion.div>
+  );
+}
+
+// 22-Jul tracker item 3: day-details on the artist's own calendar
+// tab. Uses the same three states as the public profile version
+// (unavailable / open / partially booked) but skips the login gate
+// since this is the artist's own dashboard — they always see the
+// slot strips.
+function ArtistDayDetails({ date, availability }: {
+  date: Date; availability: AvailabilityInput;
+}) {
+  const dayKey = isoDay(date);
+  const slots = (availability.slotsByDay[dayKey] ?? [])
+    .slice()
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const isBlocked = availability.blockedDays.has(dayKey);
+  const isFull = (availability.bookingsByDay[dayKey] ?? 0) + (availability.eventsByDay[dayKey] ?? 0) >= availability.fullDayLimit;
+  const blockedReason = availability.blockedReasonByDay?.[dayKey];
+  const hasBookings = slots.length > 0;
+
+  const pillTone = isBlocked || isFull
+    ? "bg-rose/10 border-rose/30 text-rose"
+    : hasBookings
+      ? "bg-gold/10 border-gold/30 text-gold"
+      : "bg-emerald/10 border-emerald/30 text-emerald";
+  const pillLabel = isBlocked || isFull ? "Unavailable" : hasBookings ? "Partially booked" : "Fully available";
+
+  return (
+    <div className="glass rounded-3xl p-5">
+      <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-widest border ${pillTone} mb-4`}>
+        {pillLabel} · {formatDateLong(date)}
+      </div>
+
+      {(isBlocked || isFull) && (
+        <div className="rounded-2xl border border-rose/30 bg-rose/5 p-4 text-sm">
+          <div className="font-medium text-rose mb-1">
+            {isFull ? "You are fully booked on this day." : "You've blocked this date."}
+          </div>
+          <div className="text-ink-dim leading-relaxed">
+            {isFull
+              ? "You've hit your max_bookings_per_day for this date. No new customer requests will land here."
+              : blockedReason ? <em>&ldquo;{blockedReason}&rdquo;</em> : "No reason recorded."}
+          </div>
+        </div>
+      )}
+
+      {!isBlocked && !isFull && hasBookings && (
+        <>
+          <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-2 flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-gold" />
+            Already scheduled
+          </div>
+          <div className="space-y-2">
+            {slots.map((s, i) => <ArtistDayStrip key={`${s.startTime}-${i}`} slot={s} />)}
+          </div>
+        </>
+      )}
+
+      {!isBlocked && !isFull && !hasBookings && (
+        <div className="rounded-2xl border border-emerald/30 bg-emerald/5 p-4">
+          <div className="font-medium text-emerald">Open all day</div>
+          <div className="text-[12px] text-ink-dim mt-0.5">No bookings on this date yet.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ArtistDayStrip({ slot }: { slot: import("@/lib/availability").ScheduledSlot }) {
+  const tone =
+    slot.kind === "confirmed" || slot.kind === "event"
+      ? "border-rose/40 bg-rose/5"
+      : "border-amber/40 bg-amber/5";
+  const dot = slot.kind === "confirmed" || slot.kind === "event" ? "bg-rose" : "bg-amber";
+  const subline =
+    slot.kind === "confirmed"
+      ? "Confirmed booking"
+      : slot.kind === "event"
+        ? "Blocked on your own calendar"
+        : "Customer request pending your response";
+  return (
+    <div className={`rounded-2xl border px-4 py-3 ${tone}`}>
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+        {slot.startTime} → {slot.endTime}
+      </div>
+      <div className="text-[12px] text-ink-dim mt-0.5 ml-3.5">{subline}</div>
+    </div>
   );
 }
 
