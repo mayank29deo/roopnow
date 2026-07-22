@@ -7,9 +7,14 @@ import {
   Star, MapPin, Instagram, BadgeCheck, Award, ArrowLeft,
   Clock, Sparkles, X, ChevronLeft, ChevronRight, Share2, Heart,
   Users, Palette, Plane, IndianRupee, FileText, CreditCard,
-  Compass, ScrollText,
+  Compass, ScrollText, Info, LogIn, Lock,
 } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import {
+  isoDay,
+  formatRange,
+  type ScheduledSlot,
+} from "@/lib/availability";
+import { formatDateShort, formatPrice } from "@/lib/utils";
 import { BookingDrawer } from "./BookingDrawer";
 import { AvailabilityCalendar } from "./AvailabilityCalendar";
 import type { AvailabilityInput } from "@/lib/availability";
@@ -78,6 +83,10 @@ export function ArtistProfile({
   // booking drawer with that date pre-picked so step 2 only needs a
   // time-slot tap. Cleared on drawer close.
   const [bookingInitialDate, setBookingInitialDate] = useState<Date | null>(null);
+  // 17-Jul: the Availability tab now shows day-level details in
+  // place — tap a date to inspect what's already scheduled instead
+  // of jumping straight into the booking drawer.
+  const [availabilityDate, setAvailabilityDate] = useState<Date | null>(null);
 
   function startBookingForDate(d: Date) {
     if (artist.services.length === 0) return;
@@ -416,20 +425,51 @@ export function ArtistProfile({
               >
                 <h3 className="font-display text-3xl mb-2">When {artist.displayName.split(" ")[0]} is available</h3>
                 <p className="text-ink-dim text-sm mb-6">
-                  Tap any green or yellow date to start a booking request. Red days are blocked or fully booked.
+                  Tap any green or yellow date to see what&rsquo;s already scheduled. Red days are blocked or fully booked.
                 </p>
                 <div className="glass rounded-3xl p-6">
                   <AvailabilityCalendar
                     availability={availability}
-                    onPick={artist.services.length > 0 ? startBookingForDate : undefined}
+                    value={availabilityDate}
+                    onPick={(d) => setAvailabilityDate(d)}
                   />
+                  {/* 17-Jul tracker: (i) hint for anon visitors telling
+                      them why yellow tiles don't reveal timings. Only
+                      shows when there's no session — logged-in users
+                      see the full slot list below on tap. */}
+                  {!user && (
+                    <div className="mt-4 pt-4 border-t border-border/50 flex items-start gap-2 text-[12px] text-ink-dim">
+                      <Info size={14} className="text-gold shrink-0 mt-0.5" />
+                      <span>Log in to check out booked timings on the dates marked yellow.</span>
+                    </div>
+                  )}
                 </div>
+
+                {/* 17-Jul tracker: day-level details panel, mirrors the
+                    Step-2 booking-drawer "Already scheduled" strips
+                    so the customer can inspect what's booked without
+                    committing to send a request. */}
+                {availabilityDate && (
+                  <AvailabilityDetails
+                    date={availabilityDate}
+                    availability={availability}
+                    user={user}
+                  />
+                )}
+
                 <button
-                  onClick={() => setBooking(artist.services[0] ?? null)}
+                  onClick={() => {
+                    if (artist.services.length === 0) return;
+                    if (availabilityDate) startBookingForDate(availabilityDate);
+                    else setBooking(artist.services[0]);
+                  }}
                   disabled={artist.services.length === 0}
                   className="btn-primary shine mt-6"
                 >
-                  <Sparkles size={14} /> Request a booking
+                  <Sparkles size={14} />
+                  {availabilityDate
+                    ? `Request booking for ${formatDateShort(availabilityDate)}`
+                    : "Request a booking"}
                 </button>
               </motion.div>
             )}
@@ -552,6 +592,128 @@ export function ArtistProfile({
 //     → visibly distinct colour (was both warm tones / hard to tell apart)
 //   • Each field rendered as an icon-led card so the section reads as
 //     a structured spec sheet instead of a free-form list
+// 17-Jul: day-details panel under the Availability calendar.
+// Logged-in users see the same "Already scheduled" strips the
+// booking drawer renders at Step 2. Anon visitors see a login gate
+// with a small (i) icon repeating why yellow tiles are opaque
+// until they sign in.
+function AvailabilityDetails({
+  date, availability, user,
+}: {
+  date: Date;
+  availability: import("@/lib/availability").AvailabilityInput;
+  user: { id: string; role: string; name: string } | null;
+}) {
+  const dayKey = isoDay(date);
+  const slots = (availability.slotsByDay[dayKey] ?? [])
+    .slice()
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const isBlocked = availability.blockedDays.has(dayKey);
+  const isFull = (availability.bookingsByDay[dayKey] ?? 0) + (availability.eventsByDay[dayKey] ?? 0) >= availability.fullDayLimit;
+  const blockedReason = availability.blockedReasonByDay?.[dayKey];
+  const hasBookings = slots.length > 0;
+
+  const pillTone = isBlocked || isFull
+    ? "bg-rose/10 border-rose/30 text-rose"
+    : hasBookings
+      ? "bg-gold/10 border-gold/30 text-gold"
+      : "bg-emerald/10 border-emerald/30 text-emerald";
+  const pillLabel = isBlocked || isFull
+    ? "Unavailable"
+    : hasBookings
+      ? "Partially booked"
+      : "Fully available";
+
+  return (
+    <div className="mt-6 rounded-3xl border border-border bg-surface/40 p-6">
+      <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-widest border ${pillTone} mb-4`}>
+        {pillLabel} · {formatDateShort(date)}
+      </div>
+
+      {/* Unavailable-date reason for both logged-in + anon */}
+      {(isBlocked || isFull) && (
+        <div className="rounded-2xl border border-rose/30 bg-rose/5 p-4 text-sm">
+          <div className="font-medium text-rose mb-1">
+            {isFull ? "This day is fully booked." : "The artist has blocked this date."}
+          </div>
+          <div className="text-ink-dim leading-relaxed">
+            {isFull
+              ? "The artist has already accepted the maximum number of bookings for this date. Try another day."
+              : blockedReason
+                ? <em>&ldquo;{blockedReason}&rdquo;</em>
+                : "No reason was provided. Please pick another day."}
+          </div>
+        </div>
+      )}
+
+      {/* Slot strips — logged-in visitors only */}
+      {!isBlocked && !isFull && user && hasBookings && (
+        <>
+          <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-2 flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-gold" />
+            Already scheduled
+          </div>
+          <p className="text-[12px] text-ink-dim leading-relaxed mb-3">
+            The strips below are the times the artist can&rsquo;t take a new booking.
+          </p>
+          <div className="space-y-2">
+            {slots.map((s, i) => <AvailabilityStrip key={`${s.startTime}-${i}`} slot={s} />)}
+          </div>
+        </>
+      )}
+
+      {/* Anon visitors on green day → confirm it's open. */}
+      {!isBlocked && !isFull && !hasBookings && (
+        <div className="rounded-2xl border border-emerald/30 bg-emerald/5 p-4">
+          <div className="font-medium text-emerald">Open all day</div>
+          <div className="text-[12px] text-ink-dim mt-0.5">No bookings yet on this date.</div>
+        </div>
+      )}
+
+      {/* Login gate — anon visitor tapped a yellow day. */}
+      {!isBlocked && !isFull && !user && hasBookings && (
+        <div className="rounded-2xl border border-gold/30 bg-gold/5 p-4">
+          <div className="flex items-start gap-2 mb-3">
+            <Lock size={14} className="text-gold shrink-0 mt-0.5" />
+            <div>
+              <div className="font-medium text-ink mb-0.5">Log in to see the exact booked timings</div>
+              <div className="text-[12px] text-ink-dim leading-relaxed">
+                This day is partially booked, and the specific timings are only visible to signed-in customers.
+              </div>
+            </div>
+          </div>
+          <Link href="/login" className="btn-primary text-xs py-2 px-4 inline-flex">
+            <LogIn size={13} /> Log in
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AvailabilityStrip({ slot }: { slot: ScheduledSlot }) {
+  const tone =
+    slot.kind === "confirmed" || slot.kind === "event"
+      ? "border-rose/40 bg-rose/5"
+      : "border-amber/40 bg-amber/5";
+  const dot = slot.kind === "confirmed" || slot.kind === "event" ? "bg-rose" : "bg-amber";
+  const subline =
+    slot.kind === "confirmed"
+      ? "Confirmed booking — the artist has accepted this slot."
+      : slot.kind === "event"
+        ? "The artist has blocked this time on their own calendar."
+        : "Another customer's request is pending here — waiting on the artist.";
+  return (
+    <div className={`rounded-2xl border px-4 py-3 ${tone}`}>
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+        {formatRange(slot.startTime, slot.endTime)}
+      </div>
+      <div className="text-[12px] text-ink-dim mt-0.5 ml-3.5">{subline}</div>
+    </div>
+  );
+}
+
 function ProfessionalDetailsBlock({ artist }: { artist: Artist }) {
   const brands = artist.cosmeticBrands.split(",").map((b) => b.trim()).filter(Boolean);
   const outstationPoints = artist.outstationConditions
