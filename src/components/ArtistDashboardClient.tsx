@@ -634,11 +634,33 @@ function fmtDurationLabel(minutes: number): string {
 // ============================================================
 function BookingsTab({ bookings }: { bookings: Booking[] }) {
   const [filter, setFilter] = useState<"all" | "accepted" | "completed" | "cancelled" | "rejected">("accepted");
-  // 13-Jul: sort ascending by date so upcoming work naturally sits
-  // at the top of the list — same reasoning as the Overview page.
+
+  // 23-Jul tracker item 4:
+  //   • "Accepted" now means "accepted AND date >= today" — i.e.
+  //     upcoming work only. Old accepted bookings whose date has
+  //     already passed slide into Completed automatically.
+  //   • "Completed" gathers both explicitly-completed rows and
+  //     accepted rows whose date is in the past. Previously it
+  //     always read 0 because we never wrote status='completed'
+  //     from anywhere the artist could reach.
+  // startOfToday is anchored to IST midnight so a booking scheduled
+  // later today still counts as upcoming regardless of UTC drift.
+  const startOfTodayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  startOfTodayIST.setHours(0, 0, 0, 0);
+  function matches(b: Booking, f: typeof filter): boolean {
+    if (f === "all") return true;
+    if (f === "accepted") return b.status === "accepted" && new Date(b.date) >= startOfTodayIST;
+    if (f === "completed") {
+      return b.status === "completed" || (b.status === "accepted" && new Date(b.date) < startOfTodayIST);
+    }
+    return b.status === f;
+  }
+
   const filtered = bookings
-    .filter((b) => filter === "all" || b.status === filter)
+    .filter((b) => matches(b, filter))
     .slice()
+    // 13-Jul: sort ascending by date so upcoming work naturally sits
+    // at the top of the list — same reasoning as the Overview page.
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
@@ -651,13 +673,13 @@ function BookingsTab({ bookings }: { bookings: Booking[] }) {
               filter === f ? "bg-gradient-to-r from-gold-bright to-gold-deep text-wine-deep font-medium" : "bg-surface border border-border text-ink-dim hover:text-ink"
             }`}
           >
-            {f} ({f === "all" ? bookings.length : bookings.filter((b) => b.status === f).length})
+            {f === "accepted" ? "Upcoming" : f === "completed" ? "Past" : f} ({bookings.filter((b) => matches(b, f)).length})
           </button>
         ))}
       </div>
       {filtered.length === 0 ? (
         <div className="py-16 text-center border border-dashed border-border rounded-3xl text-ink-dim">
-          No {filter} bookings.
+          No {filter === "accepted" ? "upcoming" : filter === "completed" ? "past" : filter} bookings.
         </div>
       ) : (
         <div className="grid gap-3">
