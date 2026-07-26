@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Download, Instagram, Mail, MessageCircle, Phone, Sparkles } from "lucide-react";
 
 const SUPPORT_EMAIL = "roopsupport@gmail.com";
-const SUPPORT_PHONE_HUMAN = "+91 80887 18846";
-const SUPPORT_PHONE_DIAL = "+918088718846";
-const WHATSAPP_URL = `https://wa.me/918088718846`;
+const SUPPORT_PHONE_HUMAN = "+91 80887 18845";
+const SUPPORT_PHONE_DIAL = "+918088718845";
+const WHATSAPP_URL = `https://wa.me/918088718845`;
 const INSTAGRAM_URL = "https://www.instagram.com/roop.now";
 const PDF_URL = "/policies/roop-platform-policies.pdf";
 

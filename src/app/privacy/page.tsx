@@ -6,8 +6,8 @@ import { Download, Lock, Mail, Phone, Shield, Sparkles } from "lucide-react";
 // customer-first — full policies live on /terms.
 
 const SUPPORT_EMAIL = "roopsupport@gmail.com";
-const SUPPORT_PHONE_HUMAN = "+91 80887 18846";
-const SUPPORT_PHONE_DIAL = "+918088718846";
+const SUPPORT_PHONE_HUMAN = "+91 80887 18845";
+const SUPPORT_PHONE_DIAL = "+918088718845";
 const EFFECTIVE_DATE = "20 March 2026";
 const LAST_UPDATED = "29 June 2026";
 const PDF_URL = "/policies/roop-platform-policies.pdf";
