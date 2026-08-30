@@ -279,7 +279,7 @@ export function BookingDrawer({
 
               {step === 2 && service && (
                 <div>
-                  <h3 className="font-display text-2xl mb-1">Pick date & arrival time</h3>
+                  <h3 className="font-display text-2xl mb-1">Pick date & ready-by time</h3>
                   <p className="text-sm text-ink-dim mb-5">
                     Unavailable dates are shown in red. Pick a free or partially-booked day.
                   </p>
@@ -403,7 +403,7 @@ export function BookingDrawer({
                     <div className="space-y-2 text-sm">
                       <Row label="Service" value={service.name} />
                       <Row label="Date" value={date ? formatDateLong(date) : "—"} />
-                      <Row label="Arrival" value={slot ? formatTime(slot) : "—"} />
+                      <Row label="Ready by" value={slot ? formatTime(slot) : "—"} />
                       {/* 7-Jul item 5: quote is service price × head count.
                           The row appears only when a party size has been
                           entered so a bride booking for herself doesn't see
@@ -609,11 +609,15 @@ function DatePicker({
         </section>
       )}
 
-      {/* Arrival time */}
+      {/* Ready-by time. 26-Aug: the customer-facing label was
+          reframed from "artist arrival" to "when do you want to be
+          ready" — the underlying slot / duration_minutes model is
+          unchanged, so the artist still sees an arrival-style time
+          on their end. Suraksha wanted the vocab shift only. */}
       <section>
         <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim mb-3 flex items-center gap-1.5">
           <span className="w-1 h-1 rounded-full bg-gold" />
-          Your arrival time
+          Your ready-by time
         </div>
         {/* 13-Jul: a bare <input type=time> shows only "--:--" when
             empty and three separate users told Suraksha they weren't
@@ -623,7 +627,7 @@ function DatePicker({
             time" hint sits below the field until a value is picked. */}
         <div className="rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/10 to-transparent p-4 hover:border-gold transition-colors">
           <label className="block cursor-pointer">
-            <span className="text-[10px] uppercase tracking-widest text-ink-dim block mb-1.5">Artist should arrive at</span>
+            <span className="text-[10px] uppercase tracking-widest text-ink-dim block mb-1.5">You want to be ready by</span>
             <input
               type="time"
               value={arrivalTime ?? ""}
