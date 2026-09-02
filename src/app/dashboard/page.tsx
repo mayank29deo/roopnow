@@ -159,7 +159,7 @@ function BookingCard({ booking, canCancel, past }: {
             <Calendar size={12} className="text-gold" /> {formatDateLong(new Date(booking.date))}
           </span>
           <span className="flex items-center gap-1.5 text-ink-dim">
-            <Clock size={12} className="text-gold" /> {booking.time_slot} · {service.duration} min
+            <Clock size={12} className="text-gold" /> Ready by {shiftBlockStartToReadyBy(booking.time_slot)} · {service.duration} min
           </span>
           {booking.address && (
             <span className="flex items-center gap-1.5 text-ink-dim">
@@ -186,4 +186,17 @@ function BookingCard({ booking, canCancel, past }: {
       )}
     </div>
   );
+}
+
+// 2-Sep iteration: server stores time_slot as the artist block
+// start (readyBy - 3h). The customer's own dashboard should read
+// back the ready-by moment they actually picked — this un-shifts.
+// Wrap-safe for the (unlikely) case where readyBy < 3:00 AM and
+// the stored time_slot rolled into the previous day.
+function shiftBlockStartToReadyBy(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const total = h * 60 + m + 3 * 60;
+  const wrapped = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(wrapped / 60)).padStart(2, "0")}:${String(wrapped % 60).padStart(2, "0")}`;
 }

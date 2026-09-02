@@ -15,6 +15,22 @@ function fmt12(totalMinutes: number): string {
   return min === 0 ? `${h12}:00 ${ampm}` : `${h12}:${String(min).padStart(2, "0")} ${ampm}`;
 }
 
+// 2-Sep: customer picks a ready-by time; artist's block is the
+// 4-hour window running from readyBy-3h → readyBy+1h. We shift the
+// stored time_slot back by 3h so every existing consumer that reads
+// time_slot as "block start" (artist card, overlap check, calendar
+// tile) works unchanged — only customer-facing surfaces need to
+// unshift for display.
+const READY_BY_SHIFT_MINUTES = 3 * 60;
+
+function shiftReadyByToBlockStart(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const total = h * 60 + m - READY_BY_SHIFT_MINUTES;
+  const wrapped = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(wrapped / 60)).padStart(2, "0")}:${String(wrapped % 60).padStart(2, "0")}`;
+}
+
 const schema = z.object({
   artistId: z.string(),
   serviceId: z.string(),
@@ -41,10 +57,20 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Please log in to book." }, { status: 401 });
 
     const data = schema.parse(await req.json());
-    const arrival = data.arrivalTime ?? data.timeSlot;
-    if (!arrival) {
+    const readyBy = data.arrivalTime ?? data.timeSlot;
+    if (!readyBy) {
       return NextResponse.json({ error: "Arrival time is required." }, { status: 400 });
     }
+    // 2-Sep iteration: the customer picks a "ready by" time — the
+    // moment they want to be look-completed. The artist actually
+    // needs to be on-site earlier and gets a small post-buffer at
+    // the end. We map the customer's ready-by to the artist block
+    // START by shifting -3h; the default 4h duration carries them
+    // to ready-by + 1h. Client-side vocab already reflects this
+    // ("ready-by time" labels); the DB column stays time_slot to
+    // avoid a schema migration but semantically now holds the
+    // block start rather than the customer's picked time.
+    const arrival = shiftReadyByToBlockStart(readyBy);
     const supabase = await createClient();
 
     const { data: service } = await supabase
