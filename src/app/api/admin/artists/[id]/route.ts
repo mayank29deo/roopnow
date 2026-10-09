@@ -7,6 +7,11 @@ import { notifyArtistApproved } from "@/lib/notify";
 const schema = z.object({
   verified: z.boolean().optional(),
   featured: z.boolean().optional(),
+  // 6-Oct tracker item 2: deactivation acts as a soft hold — the
+  // artist row stays, their data persists, but every public surface
+  // (/discover, homepage featured, /artists/[id]) treats them as
+  // unlisted. Flip it back off to restore. Admin-only toggle.
+  deactivated: z.boolean().optional(),
 });
 
 export async function PATCH(
@@ -29,6 +34,7 @@ export async function PATCH(
   const update: Record<string, unknown> = {};
   if (typeof body.verified === "boolean") update.verified = body.verified;
   if (typeof body.featured === "boolean") update.featured = body.featured;
+  if (typeof body.deactivated === "boolean") update.deactivated = body.deactivated;
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
@@ -69,4 +75,26 @@ export async function PATCH(
   }
 
   return NextResponse.json({ ok: true, artist: data });
+}
+
+// 6-Oct tracker item 2: hard-delete an artist profile. Cascades
+// through portfolio_items, services, bookings, reviews, additional
+// charges via existing FKs. The auth.users row is left alone — the
+// person's login still works, they just no longer have an artist
+// profile (and the handle_new_user trigger doesn't re-create one
+// because they already have a profiles row). Admin-only.
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await getSessionUser();
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const admin = createAdminClient();
+  const { error } = await admin.from("artists").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ ok: true });
 }

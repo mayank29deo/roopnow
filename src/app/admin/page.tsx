@@ -16,6 +16,7 @@ type ArtistAdminRow = {
   avatar_url: string;
   verified: boolean;
   featured: boolean;
+  deactivated: boolean;
   created_at: string;
   agreed_to_terms: boolean;
   upi_id: string | null;
@@ -82,7 +83,7 @@ export default async function AdminPage() {
     admin.from("artists")
       .select(`
         id, user_id, display_name, city, area, specialties, years_exp, instagram,
-        avatar_url, verified, featured, created_at, agreed_to_terms, upi_id, bank_account_no,
+        avatar_url, verified, featured, deactivated, created_at, agreed_to_terms, upi_id, bank_account_no,
         profiles!artists_user_id_fkey ( email, name, phone )
       `)
       .order("created_at", { ascending: false }),
@@ -152,6 +153,7 @@ export default async function AdminPage() {
         avatarUrl: a.avatar_url,
         verified: a.verified,
         featured: a.featured,
+        deactivated: a.deactivated,
         createdAt: a.created_at,
         agreedToTerms: a.agreed_to_terms,
         hasPaymentDetails: !!(a.upi_id || a.bank_account_no),

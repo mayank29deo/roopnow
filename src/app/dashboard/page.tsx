@@ -4,6 +4,7 @@ import { createClient, getSessionUser } from "@/lib/supabase/server";
 import { formatPrice, formatDateLong } from "@/lib/utils";
 import { Sparkles, Calendar, Clock, MapPin, CheckCircle, XCircle, Clock3 } from "lucide-react";
 import { CancelBookingButton } from "@/components/CancelBookingButton";
+import { EditProfileCard } from "@/components/EditProfileCard";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,14 @@ export default async function DashboardPage() {
   if (user.role === "artist") redirect("/artist/dashboard");
 
   const supabase = await createClient();
+  // 6-Oct tracker item 3: pull the current profile row so the edit
+  // card can seed its inputs without a round trip.
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("name, phone, email")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const { data } = await supabase
     .from("bookings")
     .select(`
@@ -65,10 +74,18 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-4 mb-12">
+        <div className="grid sm:grid-cols-3 gap-4 mb-8">
           <StatCard label="Pending" value={pending.length.toString()} highlight={pending.length > 0} />
           <StatCard label="Upcoming" value={active.length.toString()} />
           <StatCard label="Completed" value={past.filter((b) => b.status === "accepted" || b.status === "completed").length.toString()} />
+        </div>
+
+        <div className="mb-12">
+          <EditProfileCard
+            initialName={profileRow?.name ?? user.name}
+            initialPhone={profileRow?.phone ?? null}
+            email={profileRow?.email ?? user.email ?? ""}
+          />
         </div>
 
         {pending.length > 0 && (

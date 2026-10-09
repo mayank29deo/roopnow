@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Sparkles, Loader2, Mail, Lock, User, Phone, Palette, ShoppingBag } from "lucide-react";
+import { Sparkles, Loader2, Mail, Lock, User, Phone, Palette, ShoppingBag, Instagram } from "lucide-react";
 import { Logo } from "./Logo";
 import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 
@@ -24,6 +24,9 @@ export function AuthForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
+  // 6-Oct tracker item 1: artist signups collect Instagram handle
+  // up front so admin can verify credentials from first contact.
+  const [instagram, setInstagram] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +36,13 @@ export function AuthForm({
     setLoading(true);
     try {
       const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
-      const body = mode === "login" ? { email, password } : { name, email, password, phone, role };
+      const body = mode === "login"
+        ? { email, password }
+        : {
+            name, email, password, phone, role,
+            // Only include when relevant — customers don't need it.
+            ...(role === "artist" && instagram.trim() ? { instagram: instagram.trim() } : {}),
+          };
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -210,6 +219,19 @@ export function AuthForm({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="auth-input"
+                />
+              </Field>
+            )}
+            {mode === "signup" && role === "artist" && (
+              <Field icon={<Instagram size={16} />} label="Instagram username">
+                <input
+                  type="text"
+                  placeholder="yourname (without the @)"
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value.replace(/^@/, "").trim())}
+                  className="auth-input"
+                  autoCapitalize="none"
+                  spellCheck={false}
                 />
               </Field>
             )}

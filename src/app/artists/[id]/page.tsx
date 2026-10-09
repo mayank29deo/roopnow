@@ -99,11 +99,15 @@ export default async function ArtistPage({
   // a 404 so unpublished profiles aren't discoverable by URL either.
   const artistRow = rawArtist as {
     verified?: boolean;
+    deactivated?: boolean;
     user_id?: string;
   };
   const isSelf = !!user && !!artistRow.user_id && user.id === artistRow.user_id;
   const isAdmin = user?.role === "admin";
-  if (!artistRow.verified && !isSelf && !isAdmin) notFound();
+  // 6-Oct tracker item 2: deactivated profiles get the same
+  // treatment as unverified — hidden to the public, visible to self
+  // (so the artist can preview after reactivation) and admin.
+  if ((!artistRow.verified || artistRow.deactivated) && !isSelf && !isAdmin) notFound();
 
   // Increment profile view counter using service-role (RLS ignores it).
   // Kept best-effort so a failure doesn't break the page.

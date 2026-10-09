@@ -166,6 +166,11 @@ alter table public.artists add column if not exists trial_service_offered boolea
 -- covers the artist's story; this is just the training / academy
 -- name shown on the public profile.
 alter table public.artists add column if not exists certified_from text not null default '';
+
+-- 6-Oct tracker item 2: admin can soft-hold an artist profile. When
+-- true, every public query filters the row out — same gating pattern
+-- as `verified`. Flip back off to restore.
+alter table public.artists add column if not exists deactivated boolean not null default false;
 alter table public.artists add column if not exists trial_service_description text not null default '';
 alter table public.bookings drop constraint if exists bookings_status_check;
 alter table public.bookings add constraint bookings_status_check

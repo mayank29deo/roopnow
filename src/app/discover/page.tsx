@@ -20,6 +20,7 @@ async function getArtists() {
       .from("artists")
       .select("*, portfolio_items(image_url, sort_order), reviews(rating), services(price, category)")
       .eq("verified", true)
+      .eq("deactivated", false)
       .order("featured", { ascending: false })
       .order("years_exp", { ascending: false });
     return (data ?? []).map(toCardArtist);

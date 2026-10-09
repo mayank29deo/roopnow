@@ -23,6 +23,7 @@ async function getFeatured() {
       .select("*, portfolio_items(image_url, sort_order), reviews(rating), services(price)")
       .eq("featured", true)
       .eq("verified", true)
+      .eq("deactivated", false)
       .order("years_exp", { ascending: false })
       .limit(6);
     return (data ?? []).map(toCardArtist);

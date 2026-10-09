@@ -38,6 +38,7 @@ type AdminArtist = {
   avatarUrl: string;
   verified: boolean;
   featured: boolean;
+  deactivated: boolean;
   createdAt: string;
   agreedToTerms: boolean;
   hasPaymentDetails: boolean;
@@ -325,6 +326,11 @@ function ArtistsTab({ artists: initial }: { artists: AdminArtist[] }) {
   function updateOne(updated: AdminArtist) {
     setList((all) => all.map((a) => (a.id === updated.id ? updated : a)));
   }
+  // 6-Oct: remove from local list after a successful hard delete so
+  // the row disappears without a page refresh.
+  function removeOne(id: string) {
+    setList((all) => all.filter((a) => a.id !== id));
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
@@ -365,19 +371,24 @@ function ArtistsTab({ artists: initial }: { artists: AdminArtist[] }) {
         </div>
       ) : (
         <div className="luxe grid gap-3">
-          {filtered.map((a) => <AdminArtistRow key={a.id} artist={a} onChange={updateOne} />)}
+          {filtered.map((a) => <AdminArtistRow key={a.id} artist={a} onChange={updateOne} onDelete={removeOne} />)}
         </div>
       )}
     </motion.div>
   );
 }
 
-function AdminArtistRow({ artist, onChange }: { artist: AdminArtist; onChange: (a: AdminArtist) => void }) {
-  const [busy, setBusy] = useState<"verify" | "feature" | null>(null);
+function AdminArtistRow({ artist, onChange, onDelete }: {
+  artist: AdminArtist;
+  onChange: (a: AdminArtist) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [busy, setBusy] = useState<"verify" | "feature" | "deactivate" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function toggle(field: "verified" | "featured") {
-    setBusy(field === "verified" ? "verify" : "feature"); setError(null);
+  async function toggle(field: "verified" | "featured" | "deactivated") {
+    setBusy(field === "verified" ? "verify" : field === "featured" ? "feature" : "deactivate");
+    setError(null);
     try {
       const res = await fetch(`/api/admin/artists/${artist.id}`, {
         method: "PATCH",
@@ -394,6 +405,26 @@ function AdminArtistRow({ artist, onChange }: { artist: AdminArtist; onChange: (
     }
   }
 
+  // 6-Oct tracker item 2: hard-delete. Confirm twice because the
+  // cascade through bookings / portfolio / services / reviews is
+  // irreversible. The auth.users row is left alone so the person
+  // can still log in — they just no longer have an artist profile.
+  async function deleteProfile() {
+    const name = artist.displayName || "this artist";
+    if (!confirm(`Delete ${name}'s profile permanently? Their bookings, portfolio, services and reviews will be removed with it.`)) return;
+    if (!confirm(`This cannot be undone. Really delete ${name}?`)) return;
+    setBusy("delete"); setError(null);
+    try {
+      const res = await fetch(`/api/admin/artists/${artist.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      onDelete(artist.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+      setBusy(null);
+    }
+  }
+
   return (
     <div className="glass rounded-3xl p-5 grid lg:grid-cols-[auto_1fr_auto] gap-4">
       <img src={artist.avatarUrl} alt="" className="w-16 h-16 rounded-2xl object-cover border border-border-strong" />
@@ -402,6 +433,7 @@ function AdminArtistRow({ artist, onChange }: { artist: AdminArtist; onChange: (
           <span className="font-semibold text-lg">{artist.displayName}</span>
           {artist.verified && <span className="chip text-emerald border-emerald/30"><BadgeCheck size={11} /> Verified</span>}
           {artist.featured && <span className="chip text-gold border-gold/30">★ Featured</span>}
+          {artist.deactivated && <span className="chip text-rose border-rose/30">On hold</span>}
           {!artist.agreedToTerms && <span className="chip text-rose border-rose/30">No terms</span>}
         </div>
         <div className="text-sm text-ink-dim mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -444,6 +476,24 @@ function AdminArtistRow({ artist, onChange }: { artist: AdminArtist; onChange: (
           className="text-xs text-ink-dim hover:text-ink disabled:opacity-50"
         >
           {busy === "feature" ? <Loader2 className="animate-spin inline" size={11} /> : artist.featured ? "Remove from featured" : "Mark as featured"}
+        </button>
+        {/* 6-Oct tracker item 2 — hold + delete. Deactivate is a
+            reversible soft-hide; Delete is irreversible. */}
+        <button
+          onClick={() => toggle("deactivated")}
+          disabled={busy !== null}
+          className="text-xs text-ink-dim hover:text-amber disabled:opacity-50"
+        >
+          {busy === "deactivate"
+            ? <Loader2 className="animate-spin inline" size={11} />
+            : artist.deactivated ? "Reactivate profile" : "Put profile on hold"}
+        </button>
+        <button
+          onClick={deleteProfile}
+          disabled={busy !== null}
+          className="text-xs text-rose/80 hover:text-rose disabled:opacity-50"
+        >
+          {busy === "delete" ? <Loader2 className="animate-spin inline" size={11} /> : "Delete profile"}
         </button>
       </div>
     </div>
