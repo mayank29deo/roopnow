@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Logo } from "./Logo";
-import { Menu, X, Sparkles, LayoutDashboard, LogOut } from "lucide-react";
+import { Menu, X, Sparkles, LayoutDashboard, LogOut, UserCog } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 
@@ -125,6 +125,16 @@ export function Nav({ user }: { user: User }) {
                       >
                         <LayoutDashboard size={16} /> Dashboard
                       </Link>
+                      {/* 11-Oct: Edit profile for both roles — shared
+                          /profile page handles name + phone; artists
+                          get a prompt there pointing to their full
+                          dashboard for studio-level fields. */}
+                      <Link
+                        href="/profile"
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-surface-2"
+                      >
+                        <UserCog size={16} /> Edit profile
+                      </Link>
                       {user.role === "customer" && (
                         <button
                           onClick={upgradeToArtist}
@@ -196,6 +206,9 @@ export function Nav({ user }: { user: User }) {
                     className="btn-ghost"
                   >
                     Dashboard
+                  </Link>
+                  <Link href="/profile" className="btn-ghost">
+                    Edit profile
                   </Link>
                   <button onClick={signOut} className="btn-ghost text-rose">
                     Sign out
